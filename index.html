@@ -197,11 +197,11 @@
 const CONFIG = {
   TITULO: "Olimpiadas de Arquitectura 2026",
   // ▼ Base de datos con Google Sheets: pega aquí la URL /exec de tu Apps Script.
-  SHEETS_URL: "",
+  SHEETS_URL: "https://script.google.com/macros/s/AKfycbwu8zcFGyBvS_bwj-hHTjg9KSijnw9_uAhYzMFpYVhPxACCTN9D_W390Jiu7X_DnD17/exec",
   // ▼ Alternativa Supabase (deja en blanco si usas Google Sheets).
-  SUPABASE_URL: "https://script.google.com/macros/s/AKfycbwu8zcFGyBvS_bwj-hHTjg9KSijnw9_uAhYzMFpYVhPxACCTN9D_W390Jiu7X_DnD17/exec",
+  SUPABASE_URL: "",
   SUPABASE_ANON_KEY: "",
-  ADMIN_PIN: "0770",           // PIN del ORGANIZADOR (acceso total: sorteos, cursos, todo)
+  ADMIN_PIN: "1234",           // PIN del ORGANIZADOR (acceso total: sorteos, cursos, todo)
   // PIN por RESPONSABLE de disciplina: solo registra resultados de la SUYA.
   PINS_DISCIPLINA: {
     futbol: "1001", basquet: "1002", voleibol: "1003", atletismo: "1004",
@@ -219,14 +219,29 @@ const ONLINE = MODE !== 'local';
 let sb = null;
 if (MODE === 'supabase') sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
-/* ===== Backend Google Sheets (Apps Script) ===== */
-let _cache=null,_inflight=null;
+/* ===== Backend Google Sheets (Apps Script vía JSONP: lectura y escritura) ===== */
+let _data=null,_inflight=null;
 function parseJ(v,def){ if(v&&typeof v==='object')return v; try{return JSON.parse(v||'');}catch(e){return def;} }
 function numOrNull(v){ return (v===''||v==null)?null:Number(v); }
 function boolCo(v){ return v===true||v==='true'||v==='TRUE'||v===1||v==='1'; }
-function jsonpGet(url){ return new Promise((res,rej)=>{ const cb='__oli_'+Math.random().toString(36).slice(2); const s=document.createElement('script'); const clean=()=>{ try{delete window[cb];}catch(e){} s.remove(); }; window[cb]=d=>{ clean(); res(d); }; s.onerror=()=>{ clean(); rej(new Error('No se pudo leer la hoja.')); }; s.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cb+'&t='+Date.now(); document.body.appendChild(s); }); }
-async function sheetsLoad(force){ if(force)_cache=null; if(_cache)return _cache; if(!_inflight){ _inflight=jsonpGet(CONFIG.SHEETS_URL).then(d=>{ d.inscripciones=(d.inscripciones||[]).map(r=>Object.assign({},r,{responsable:parseJ(r.responsable,{}),jugadores:parseJ(r.jugadores,[])})); d.partidos=(d.partidos||[]).map(r=>Object.assign({},r,{gl:numOrNull(r.gl),gv:numOrNull(r.gv),jugado:boolCo(r.jugado),orden:+r.orden||0})); d.torneos=(d.torneos||[]).map(r=>Object.assign({},r,{config:parseJ(r.config,{})})); _cache=d; _inflight=null; return d; }).catch(e=>{ _inflight=null; throw e; }); } return _inflight; }
-async function sheetsPost(p){ await fetch(CONFIG.SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}); _cache=null; }
+function normalizeSheet(d){
+  d=d||{}; d.cursos=d.cursos||[]; d.disciplinas=d.disciplinas||[];
+  d.inscripciones=(d.inscripciones||[]).map(r=>Object.assign({},r,{responsable:parseJ(r.responsable,{}),jugadores:parseJ(r.jugadores,[])}));
+  d.partidos=(d.partidos||[]).map(r=>Object.assign({},r,{gl:numOrNull(r.gl),gv:numOrNull(r.gv),jugado:boolCo(r.jugado),orden:+r.orden||0}));
+  d.podios=(d.podios||[]).map(r=>Object.assign({},r,{puesto:+r.puesto}));
+  d.torneos=(d.torneos||[]).map(r=>Object.assign({},r,{config:parseJ(r.config,{})}));
+  return d;
+}
+function jsonp(extra){ return new Promise((res,rej)=>{ const cb='__oli_'+Math.random().toString(36).slice(2); const s=document.createElement('script'); let done=false;
+  const clean=()=>{ try{delete window[cb];}catch(e){} s.remove(); };
+  const to=setTimeout(()=>{ if(done)return; done=true; clean(); rej(new Error('Tiempo de espera agotado con la hoja de cálculo.')); },20000);
+  window[cb]=d=>{ if(done)return; done=true; clearTimeout(to); clean(); res(d); };
+  s.onerror=()=>{ if(done)return; done=true; clearTimeout(to); clean(); rej(new Error('No se pudo conectar con la hoja de cálculo.')); };
+  let u=CONFIG.SHEETS_URL+(CONFIG.SHEETS_URL.indexOf('?')>=0?'&':'?')+'callback='+cb+'&t='+Date.now();
+  Object.keys(extra||{}).forEach(k=>{ u+='&'+k+'='+encodeURIComponent(extra[k]); });
+  s.src=u; document.body.appendChild(s); }); }
+async function sheetsLoad(){ if(_inflight) return _inflight; _inflight=jsonp({}).then(r=>{ if(r&&r.ok===false) throw new Error(r.error||'Error de la hoja'); const d=normalizeSheet((r&&r.data)||r); _data=d; _inflight=null; return d; }).catch(e=>{ _inflight=null; throw e; }); return _inflight; }
+async function sheetsWrite(accion){ const r=await jsonp({q:JSON.stringify(accion)}); if(r&&r.ok===false) throw new Error(r.error||'No se pudo guardar en la hoja.'); if(r&&r.data) _data=normalizeSheet(r.data); return r; }
 
 const DISCIPLINAS_DEMO = [
   {id:'futbol',nombre:'Fútbol',tipo:'equipo',min_jug:7,max_jug:15,puntos_1:10,puntos_2:7,puntos_3:5,orden:1},
@@ -247,23 +262,23 @@ function uid(){ return (crypto.randomUUID?crypto.randomUUID():'id'+Date.now()+Ma
 
 const DB = {
   async cursos(){ if(MODE==='sheets') return (await sheetsLoad()).cursos||[]; if(MODE==='supabase') return (await sb.from('cursos').select('*').order('nombre')).data||[]; return LS.get('cursos',[]); },
-  async addCurso(nombre){ if(MODE==='sheets'){ await sheetsPost({action:'insert',table:'cursos',row:{id:uid(),nombre,creado:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('cursos').insert({nombre}); } else { const a=LS.get('cursos',[]); a.push({id:uid(),nombre}); LS.set('cursos',a); } },
-  async delCurso(id){ if(MODE==='sheets'){ await sheetsPost({action:'delete',table:'cursos',id}); } else if(MODE==='supabase'){ await sb.from('cursos').delete().eq('id',id); } else { LS.set('cursos', LS.get('cursos',[]).filter(c=>c.id!==id)); } },
+  async addCurso(nombre){ if(MODE==='sheets'){ await sheetsWrite({action:'insert',table:'cursos',row:{id:uid(),nombre,creado:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('cursos').insert({nombre}); } else { const a=LS.get('cursos',[]); a.push({id:uid(),nombre}); LS.set('cursos',a); } },
+  async delCurso(id){ if(MODE==='sheets'){ await sheetsWrite({action:'delete',table:'cursos',id}); } else if(MODE==='supabase'){ await sb.from('cursos').delete().eq('id',id); } else { LS.set('cursos', LS.get('cursos',[]).filter(c=>c.id!==id)); } },
   async getOrCreateCurso(nombre){ const norm=s=>String(s).trim().toLowerCase().replace(/\s+/g,' '); let list=await this.cursos(); let f=list.find(c=>norm(c.nombre)===norm(nombre)); if(f) return f.id; await this.addCurso(nombre); list=await this.cursos(); f=list.find(c=>norm(c.nombre)===norm(nombre)); return f?f.id:null; },
   async disciplinas(){ if(MODE==='sheets'){ const d=(await sheetsLoad()).disciplinas||[]; return d.slice().sort((a,b)=>(+a.orden||0)-(+b.orden||0)); } if(MODE==='supabase') return (await sb.from('disciplinas').select('*').order('orden')).data||[]; let d=LS.get('disciplinas',null); if(!d){ d=DISCIPLINAS_DEMO; LS.set('disciplinas',d);} return d; },
-  async updateDisciplina(id,campos){ if(MODE==='sheets'){ await sheetsPost({action:'update',table:'disciplinas',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('disciplinas').update(campos).eq('id',id); } else { const d=LS.get('disciplinas',DISCIPLINAS_DEMO); const i=d.findIndex(x=>x.id===id); d[i]={...d[i],...campos}; LS.set('disciplinas',d); } },
+  async updateDisciplina(id,campos){ if(MODE==='sheets'){ await sheetsWrite({action:'update',table:'disciplinas',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('disciplinas').update(campos).eq('id',id); } else { const d=LS.get('disciplinas',DISCIPLINAS_DEMO); const i=d.findIndex(x=>x.id===id); d[i]={...d[i],...campos}; LS.set('disciplinas',d); } },
   async inscripciones(){ if(MODE==='sheets') return (await sheetsLoad()).inscripciones||[]; if(MODE==='supabase') return (await sb.from('inscripciones').select('*').order('fecha')).data||[]; return LS.get('inscripciones',[]); },
-  async addInscripcion(r){ if(MODE==='sheets'){ await sheetsPost({action:'insert',table:'inscripciones',row:{...r,id:uid(),fecha:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('inscripciones').insert(r); } else { const a=LS.get('inscripciones',[]); a.push({...r,id:uid(),fecha:new Date().toISOString()}); LS.set('inscripciones',a); } },
-  async delInscripcion(id){ if(MODE==='sheets'){ await sheetsPost({action:'delete',table:'inscripciones',id}); } else if(MODE==='supabase'){ await sb.from('inscripciones').delete().eq('id',id); } else { LS.set('inscripciones', LS.get('inscripciones',[]).filter(x=>x.id!==id)); } },
+  async addInscripcion(r){ if(MODE==='sheets'){ await sheetsWrite({action:'insert',table:'inscripciones',row:{...r,id:uid(),fecha:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('inscripciones').insert(r); } else { const a=LS.get('inscripciones',[]); a.push({...r,id:uid(),fecha:new Date().toISOString()}); LS.set('inscripciones',a); } },
+  async delInscripcion(id){ if(MODE==='sheets'){ await sheetsWrite({action:'delete',table:'inscripciones',id}); } else if(MODE==='supabase'){ await sb.from('inscripciones').delete().eq('id',id); } else { LS.set('inscripciones', LS.get('inscripciones',[]).filter(x=>x.id!==id)); } },
   async partidos(){ if(MODE==='sheets') return (await sheetsLoad()).partidos||[]; if(MODE==='supabase') return (await sb.from('partidos').select('*').order('creado')).data||[]; return LS.get('partidos',[]); },
-  async addPartido(p){ if(MODE==='sheets'){ await sheetsPost({action:'insert',table:'partidos',row:{...p,id:uid(),creado:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('partidos').insert(p); } else { const a=LS.get('partidos',[]); a.push({...p,id:uid()}); LS.set('partidos',a); } },
-  async updatePartido(id,campos){ if(MODE==='sheets'){ await sheetsPost({action:'update',table:'partidos',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('partidos').update(campos).eq('id',id); } else { const a=LS.get('partidos',[]); const i=a.findIndex(x=>x.id===id); a[i]={...a[i],...campos}; LS.set('partidos',a); } },
-  async delPartido(id){ if(MODE==='sheets'){ await sheetsPost({action:'delete',table:'partidos',id}); } else if(MODE==='supabase'){ await sb.from('partidos').delete().eq('id',id); } else { LS.set('partidos', LS.get('partidos',[]).filter(x=>x.id!==id)); } },
+  async addPartido(p){ if(MODE==='sheets'){ await sheetsWrite({action:'insert',table:'partidos',row:{...p,id:uid(),creado:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('partidos').insert(p); } else { const a=LS.get('partidos',[]); a.push({...p,id:uid()}); LS.set('partidos',a); } },
+  async updatePartido(id,campos){ if(MODE==='sheets'){ await sheetsWrite({action:'update',table:'partidos',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('partidos').update(campos).eq('id',id); } else { const a=LS.get('partidos',[]); const i=a.findIndex(x=>x.id===id); a[i]={...a[i],...campos}; LS.set('partidos',a); } },
+  async delPartido(id){ if(MODE==='sheets'){ await sheetsWrite({action:'delete',table:'partidos',id}); } else if(MODE==='supabase'){ await sb.from('partidos').delete().eq('id',id); } else { LS.set('partidos', LS.get('partidos',[]).filter(x=>x.id!==id)); } },
   async podios(){ if(MODE==='sheets') return (await sheetsLoad()).podios||[]; if(MODE==='supabase') return (await sb.from('podios').select('*')).data||[]; return LS.get('podios',[]); },
-  async setPodio(disciplina_id,puesto,curso_id){ if(MODE==='sheets'){ await sheetsPost({action:'setPodio',disciplina_id,puesto,curso_id:curso_id||null}); } else if(MODE==='supabase'){ if(curso_id) await sb.from('podios').upsert({disciplina_id,puesto,curso_id}); else await sb.from('podios').delete().match({disciplina_id,puesto}); } else { let a=LS.get('podios',[]).filter(x=>!(x.disciplina_id===disciplina_id&&x.puesto===puesto)); if(curso_id) a.push({disciplina_id,puesto,curso_id}); LS.set('podios',a); } },
+  async setPodio(disciplina_id,puesto,curso_id){ if(MODE==='sheets'){ await sheetsWrite({action:'setPodio',disciplina_id,puesto,curso_id:curso_id||null}); } else if(MODE==='supabase'){ if(curso_id) await sb.from('podios').upsert({disciplina_id,puesto,curso_id}); else await sb.from('podios').delete().match({disciplina_id,puesto}); } else { let a=LS.get('podios',[]).filter(x=>!(x.disciplina_id===disciplina_id&&x.puesto===puesto)); if(curso_id) a.push({disciplina_id,puesto,curso_id}); LS.set('podios',a); } },
   async torneosAll(){ if(MODE==='sheets'){ const arr=(await sheetsLoad()).torneos||[]; const m={}; arr.forEach(x=>m[x.disciplina_id]=x.config); return m; } if(MODE==='supabase'){ const d=(await sb.from('torneos').select('*')).data||[]; const m={}; d.forEach(x=>m[x.disciplina_id]=x.config); return m; } return LS.get('torneos',{}); },
   async torneo(id){ const m=await this.torneosAll(); return m[id]||null; },
-  async setTorneo(id,config){ if(MODE==='sheets'){ await sheetsPost({action:'setTorneo',disciplina_id:id,config:config||null}); } else if(MODE==='supabase'){ if(config===null){ await sb.from('torneos').delete().eq('disciplina_id',id);} else { await sb.from('torneos').upsert({disciplina_id:id,config}); } } else { const t=LS.get('torneos',{}); if(config===null) delete t[id]; else t[id]=config; LS.set('torneos',t); } }
+  async setTorneo(id,config){ if(MODE==='sheets'){ await sheetsWrite({action:'setTorneo',disciplina_id:id,config:config||null}); } else if(MODE==='supabase'){ if(config===null){ await sb.from('torneos').delete().eq('disciplina_id',id);} else { await sb.from('torneos').upsert({disciplina_id:id,config}); } } else { const t=LS.get('torneos',{}); if(config===null) delete t[id]; else t[id]=config; LS.set('torneos',t); } }
 };
 
 /* ===== Cálculos ===== */
@@ -417,8 +432,9 @@ async function ctx(){
 const medalIco=p=>p===1?'🥇':p===2?'🥈':'🥉';
 
 async function renderPosiciones(){
-  const c = await ctx();
   const cont = $('#tab-posiciones');
+  let c;
+  try{ c = await ctx(); }catch(e){ cont.innerHTML='<div class="card"><div class="msg err">No se pudo conectar con la base de datos (Google Sheets). Verifica que el Apps Script esté publicado para \'Cualquiera\' y que la URL /exec esté bien pegada.</div></div>'; return; }
   let html = `<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M18 2C17.1 2 16 3 16 4H8C8 3 6.9 2 6 2H2V11C2 12 3 13 4 13H6.2C6.6 15 7.9 16.7 11 17V19.08C8 19.54 8 22 8 22H16C16 22 16 19.54 13 19.08V17C16.1 16.7 17.4 15 17.8 13H20C21 13 22 12 22 11V2H18M6 11H4V4H6V11M20 11H18V4H20V11Z" /></svg> Medallero general por paralelo/curso</h2>
     <p class="sub">Suma de puntos por podios en todas las disciplinas.</p>`;
   if(!c.cursos.length){ html+=`<div class="empty">Aún no hay paralelos registrados.</div>`; }
@@ -701,8 +717,8 @@ function bindAdmin(c){
 
 function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
+if(MODE!=='local'){ setInterval(()=>{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); }, 20000); }
 renderPosiciones();
 </script>
 </body>
 </html>
-                                    
