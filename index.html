@@ -160,14 +160,14 @@
         </div>
         <div class="row">
           <div><label>Rama <span class="req">*</span></label><select name="ind_rama"><option value="">Selecciona…</option><option>Masculino</option><option>Femenino</option></select></div>
-          <div><label>Categoría / prueba (si aplica)</label><input name="ind_categoria" placeholder="Ej: 100m, opcional"></div>
         </div>
       </fieldset>
 
       <div id="bloqueContacto" class="hidden">
-        <h3>Datos de contacto (responsable)</h3>
+        <h3>Datos de contacto</h3>
+        <p class="mini" id="respNota" style="display:none;margin:-6px 0 8px">Como participante individual, tú eres responsable de tu participación (usamos tu nombre).</p>
         <div class="row">
-          <div><label>Nombre <span class="req">*</span></label><input name="resp_nombre" placeholder="Nombres y apellidos"></div>
+          <div id="respNombreWrap"><label>Nombre <span class="req">*</span></label><input name="resp_nombre" placeholder="Nombres y apellidos"></div>
           <div><label>Teléfono / WhatsApp <span class="req">*</span></label><input name="resp_tel" placeholder="09xxxxxxxx"></div>
         </div>
         <label>Correo electrónico <span class="req">*</span></label><input type="email" name="resp_email" placeholder="correo@ejemplo.com">
@@ -498,6 +498,8 @@ function selDisciplina(d){
   $('#bloqueEquipo').classList.toggle('hidden',!eq);
   $('#bloqueIndividual').classList.toggle('hidden',eq);
   $('#bloqueContacto').classList.remove('hidden');
+  $('#respNombreWrap').style.display = eq?'':'none';
+  $('#respNota').style.display = eq?'none':'block';
   if(eq){ $('#cupoInfo').textContent=`Jugadores: mínimo ${d.min_jug}, máximo ${d.max_jug}.`; if(!$('#jugadores').children.length) for(let i=0;i<d.min_jug;i++) addJugador(); }
 }
 function addJugador(){
@@ -519,10 +521,11 @@ $('#form').addEventListener('submit',async e=>{
   if(!selDisc){ insMsg('Selecciona una disciplina.','err'); return; }
   const nivel=f.nivel.value, paralelo=(f.paralelo.value||'').trim();
   if(!nivel){ insMsg('Selecciona el nivel.','err'); return; }
-  for(const n of ['resp_nombre','resp_tel','resp_email']) if(!f[n].value.trim()){ insMsg('Completa los datos de contacto.','err'); return; }
+  const reqContacto = selDisc.tipo==='equipo' ? ['resp_nombre','resp_tel','resp_email'] : ['resp_tel','resp_email'];
+  for(const n of reqContacto) if(!f[n].value.trim()){ insMsg('Completa los datos de contacto.','err'); return; }
   const cursoNombre=`${NIVEL_ABBR[nivel]}${paralelo?' '+paralelo.toUpperCase():''}`;
   const r={disciplina_id:selDisc.id, tipo:selDisc.tipo, curso_id:null, nombre_equipo:'',participante:'',cedula_part:'',rama:'',categoria:'',
-    responsable:{nombre:f.resp_nombre.value.trim(),tel:f.resp_tel.value.trim(),email:f.resp_email.value.trim()}, jugadores:[]};
+    responsable:{nombre:(selDisc.tipo==='equipo'?f.resp_nombre.value.trim():f.ind_nombre.value.trim()),tel:f.resp_tel.value.trim(),email:f.resp_email.value.trim()}, jugadores:[]};
   if(selDisc.tipo==='equipo'){
     if(!f.equipo_nombre.value.trim()){ insMsg('Ingresa el nombre del equipo.','err'); return; }
     if(!f.equipo_rama.value){ insMsg('Selecciona la rama.','err'); return; }
@@ -532,7 +535,7 @@ $('#form').addEventListener('submit',async e=>{
   } else {
     if(!f.ind_nombre.value.trim()||!f.ind_cedula.value.trim()){ insMsg('Completa los datos del participante.','err'); return; }
     if(!f.ind_rama.value){ insMsg('Selecciona la rama.','err'); return; }
-    r.participante=f.ind_nombre.value.trim(); r.cedula_part=f.ind_cedula.value.trim(); r.rama=f.ind_rama.value; r.categoria=f.ind_categoria.value.trim();
+    r.participante=f.ind_nombre.value.trim(); r.cedula_part=f.ind_cedula.value.trim(); r.rama=f.ind_rama.value;
   }
   const btn=$('#btnEnviar'); btn.disabled=true; btn.textContent='Enviando…';
   try{
