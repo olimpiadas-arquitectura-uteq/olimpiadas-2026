@@ -283,7 +283,7 @@ function setConn(ok){ _connOk=ok; const b=document.getElementById('modoBadge'); 
 let RAMA='Masculino';
 function dk(did){ return did+'__'+RAMA; }
 function baseDisc(k){ return String(k).split('__')[0]; }
-const PRUEBAS = { natacion:["25 m libre","50 m libre","25 m pecho","25 m Mariposa","Relevos 4x25 todos los estilos"], atletismo:["100 m"] };
+const PRUEBAS = { natacion:["25 m libre","50 m libre","25 m pecho","25 m Mariposa","Relevos 4x25 todos los estilos"], atletismo:["100 m","Relevos 4x100 (grupal)"] };
 function tienePruebas(did){ return !!(PRUEBAS[did]&&PRUEBAS[did].length); }
 function dk3(did,prueba){ return did+'__'+RAMA+'__'+prueba; }
 function fijarPodios(c){ document.querySelectorAll('.pod').forEach(s=>{ const key=s.dataset.prueba?(s.dataset.d+'__'+RAMA+'__'+s.dataset.prueba):(s.dataset.d+'__'+RAMA); const f=c.podios.find(p=>String(p.disciplina_id)===key&&+p.puesto===+s.dataset.pu); s.value=f?f.curso_id:''; }); }
@@ -822,7 +822,7 @@ async function renderAdmin(){
 }
 
 function bindAdmin(c){
-  $('#addCursoBtn').onclick=async()=>{ const v=$('#nuevoCurso').value.trim(); if(!v)return; await DB.addCurso(v); renderAdmin(); };
+  { const _ac=$('#addCursoBtn'); if(_ac) _ac.onclick=async()=>{ const v=$('#nuevoCurso').value.trim(); if(!v)return; await DB.addCurso(v); renderAdmin(); }; }
   document.querySelectorAll('[data-del-curso]').forEach(b=>b.onclick=async()=>{ if(confirm('¿Eliminar paralelo?')){ await DB.delCurso(b.dataset.delCurso); renderAdmin(); }});
   document.querySelectorAll('[data-del-ins]').forEach(b=>b.onclick=async()=>{
     if(!confirm('¿Eliminar inscripción?')) return;
