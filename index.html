@@ -282,12 +282,16 @@ async function sheetsWrite(accion){ try{ let raw; try{ raw=await httpPost(accion
 async function refreshData(){ try{ const d=await sheetsFetch({}); _data=d; saveSnap(d); setConn(true); reRenderActive(); }catch(e){ setConn(false); } }
 function setConn(ok){ _connOk=ok; const b=document.getElementById('modoBadge'); if(!b||MODE==='local') return; b.innerHTML='<span class="dot '+(ok?'on':'off')+'"></span>'+(ok?'Conectado a la base de datos':'Sin conexión — mostrando datos guardados'); }
 let RAMA='Masculino';
+let INS_RAMA='Todos';
+function insFiltroBar(){ const b=(v,t)=>`<button class="rb${INS_RAMA===v?' act':''}" data-insrama="${v}">${t}</button>`; return `<div class="ramabar" style="margin:0 0 12px">${b('Masculino','\u2642 Masculino')}${b('Femenino','\u2640 Femenino')}${b('Todos','Todos')}</div>`; }
 function dk(did){ return did+'__'+RAMA; }
 function baseDisc(k){ return String(k).split('__')[0]; }
 const PRUEBAS = { natacion:["25 m libre","50 m libre","25 m pecho","25 m Mariposa","Relevos 4x25 todos los estilos"], atletismo:["100 m","Relevos 4x100 (grupal)"] };
 function tienePruebas(did){ return !!(PRUEBAS[did]&&PRUEBAS[did].length); }
 function dk3(did,prueba){ return did+'__'+RAMA+'__'+prueba; }
 function esGrupal(pr){ return /relevos|grupal/i.test(pr||''); }
+function esMixta(d){ return d.tipo!=='equipo' && tienePruebas(d.id) && PRUEBAS[d.id].some(esGrupal); }
+function tipoTxt(d){ return d.tipo==='equipo'?'Por equipo':(esMixta(d)?'Individual y por equipos':'Individual'); }
 function relevoHTML(){ let s=`<fieldset style="margin-top:8px"><legend>Datos de la posta (equipo de 4)</legend><div class="row"><div style="flex:1"><label>Nombre del equipo / posta <span class="req">*</span></label><input name="rel_equipo" placeholder="Ej: Los Veloces 5to A"></div></div>`; for(let i=1;i<=4;i++){ s+=`<div class="row"><div style="flex:1"><label>Participante ${i} <span class="req">*</span></label><input name="rel_p${i}" placeholder="Nombres y apellidos"></div></div>`; } s+=`</fieldset>`; return s; }
 function onPruebaChange(pr){ const g=esGrupal(pr); const b1=document.getElementById('bloqueIndiv1'); const br=document.getElementById('bloqueRelevo'); if(b1) b1.style.display=g?'none':''; if(br){ if(g){ br.style.display=''; if(!br.innerHTML) br.innerHTML=relevoHTML(); } else { br.style.display='none'; br.innerHTML=''; } } }
 function fijarPodios(c){ document.querySelectorAll('.pod').forEach(s=>{ const key=s.dataset.prueba?(s.dataset.d+'__'+RAMA+'__'+s.dataset.prueba):(s.dataset.d+'__'+RAMA); const f=c.podios.find(p=>String(p.disciplina_id)===key&&+p.puesto===+s.dataset.pu); s.value=f?f.curso_id:''; }); }
@@ -540,7 +544,7 @@ async function renderPosiciones(){
   c.disciplinas.forEach(d=>{
     const podio = c.podios.filter(p=>p.disciplina_id===dk(d.id)).sort((a,b)=>a.puesto-b.puesto);
     html+=`<details class="card acc"><summary><span class="sec">${ico(d.id)} ${esc(d.nombre)}</span>
-      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${d.tipo==='equipo'?'Liga por equipos':'Individual'}</span></summary><div class="accbody">`;
+      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${d.tipo==='equipo'?'Liga por equipos':(esMixta(d)?'Individual y por equipos':'Individual')}</span></summary><div class="accbody">`;
     if(d.tipo==='equipo'){
       const equipos=c.inscripciones.filter(x=>x.disciplina_id===d.id && x.tipo==='equipo' && x.rama===RAMA);
       const eqids=new Set(equipos.map(e=>e.id));
@@ -613,7 +617,7 @@ async function pintarDisciplinas(){
   ds.forEach(d=>{
     const el=document.createElement('div'); el.className='disc'; el.dataset.id=d.id;
     el.innerHTML=`<span class="emo">${ico(d.id)}</span><span><b>${esc(d.nombre)}</b>
-      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${d.tipo==='equipo'?'Por equipo':'Individual'}</span></span>`;
+      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${tipoTxt(d)}</span></span>`;
     el.onclick=()=>selDisciplina(d);
     grid.appendChild(el);
   });
@@ -760,11 +764,13 @@ async function renderAdmin(){
   c.cursos.forEach(cu=>h+=`<span class="chip">${esc(cu.nombre)} <button data-del-curso="${cu.id}">✕</button></span>`);
   h+=`</div></div>`;
 
-  h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3M7 7H17V5H19V19H5V5H7V7M12 17V15H17V17H12M12 11V9H17V11H12M8 12V9H7V8H9V12H8M9.25 14C9.66 14 10 14.34 10 14.75C10 14.95 9.92 15.14 9.79 15.27L8.12 17H10V18H7V17.08L9 15H7V14H9.25" /></svg> Inscripciones (${c.inscripciones.length})</h2>`;
-  if(!c.inscripciones.length) h+=`<div class="empty">Sin inscripciones.</div>`;
+  h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3M7 7H17V5H19V19H5V5H7V7M12 17V15H17V17H12M12 11V9H17V11H12M8 12V9H7V8H9V12H8M9.25 14C9.66 14 10 14.34 10 14.75C10 14.95 9.92 15.14 9.79 15.27L8.12 17H10V18H7V17.08L9 15H7V14H9.25" /></svg> Inscripciones</h2>`;
+  h+=insFiltroBar();
+  { const _ins=c.inscripciones.filter(x=>INS_RAMA==='Todos'||x.rama===INS_RAMA);
+  if(!_ins.length) h+=`<div class="empty">Sin inscripciones${INS_RAMA==='Todos'?'':' en la rama '+INS_RAMA}.</div>`;
   else{
     c.disciplinas.forEach(d=>{
-      const arr=c.inscripciones.filter(x=>x.disciplina_id===d.id);
+      const arr=_ins.filter(x=>x.disciplina_id===d.id);
       if(!arr.length) return;
       h+=`<details><summary>${ico(d.id)} ${esc(d.nombre)} (${arr.length})</summary><div style="padding-bottom:12px">`;
       arr.forEach(x=>{
@@ -776,7 +782,7 @@ async function renderAdmin(){
       });
       h+=`</div></details>`;
     });
-  }
+  } }
   h+=`</div>`;
 
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21 3H3C1.9 3 1 3.9 1 5V19C1 20.1 1.9 21 3 21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3M21 19H3V5H21M5 7H9C9.6 7 10 7.4 10 8V16C10 16.6 9.6 17 9 17H5C4.4 17 4 16.6 4 16V8C4 7.4 4.4 7 5 7M6 9V15H8V9M15 7H19C19.6 7 20 7.4 20 8V16C20 16.6 19.6 17 19 17H15C14.4 17 14 16.6 14 16V8C14 7.4 14.4 7 15 7M16 9V15H18V9M12 11C12.6 11 13 10.6 13 10C13 9.4 12.6 9 12 9C11.4 9 11 9.4 11 10C11 10.6 11.4 11 12 11M12 15C12.6 15 13 14.6 13 14C13 13.4 12.6 13 12 13C11.4 13 11 13.4 11 14C11 14.6 11.4 15 12 15Z" /></svg> Sorteo, grupos y calendario</h2><p class="sub">Sortea los grupos, reparte el calendario en tus horarios y arma las eliminatorias. Puedes <b>rehacer el sorteo cuando quieras</b>: solo se regeneran los partidos, <b>nunca se borran las inscripciones</b>.</p>`;
@@ -914,6 +920,7 @@ function bindAdmin(c){
   document.querySelectorAll('[data-avanzar]').forEach(b=>b.onclick=()=>avanzarRonda(b.dataset.avanzar));
   document.querySelectorAll('[data-podio-bracket]').forEach(b=>b.onclick=()=>podioDesdeBracket(b.dataset.podioBracket));
   document.querySelectorAll('[data-reset-torneo]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar el sorteo y los partidos de esta disciplina en la rama '+RAMA+'?'))return; const did=b.dataset.resetTorneo; const eqset=new Set((await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); const removeIds=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).map(p=>p.id); await syncPartidos(removeIds,[]); await DB.setTorneo(dk(did),null); renderAdmin(); });
+  document.querySelectorAll('[data-insrama]').forEach(b=>b.onclick=()=>{ INS_RAMA=b.dataset.insrama; renderAdmin(); });
   bindRama();
 }
 
