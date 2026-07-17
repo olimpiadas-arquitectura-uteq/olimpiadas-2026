@@ -325,15 +325,30 @@ function calcularLiga(equipos, partidos){
   });
   return Object.values(t).map(x=>{x.DG=x.GF-x.GC;return x;}).sort((a,b)=> b.Pts-a.Pts || b.DG-a.DG || b.GF-a.GF || a.nombre.localeCompare(b.nombre));
 }
+// Descompone un nombre de paralelo combinado ("Arq 5to A-B") en sus paralelos base.
+function basesDe(nombre){
+  const s=String(nombre||'').trim(); if(!s) return [];
+  const toks=s.split(/\s+/); const last=toks[toks.length-1];
+  if(last.indexOf('-')<0) return [s];
+  const prefijo=toks.slice(0,-1).join(' ');
+  return last.split('-').map(x=>x.trim()).filter(Boolean).map(x=> (prefijo?prefijo+' ':'')+x);
+}
+function fmtPts(x){ const r=Math.round(x*100)/100; return Number.isInteger(r)?r:r.toFixed(2).replace(/\.?0+$/,''); }
 function calcularMedallero(cursos, disciplinas, podios){
   const dm = Object.fromEntries(disciplinas.map(d=>[d.id,d]));
+  const cById = Object.fromEntries(cursos.map(c=>[c.id,c]));
   const t = {};
-  cursos.forEach(c=> t[c.id]={id:c.id,nombre:c.nombre,oro:0,plata:0,bronce:0,puntos:0});
+  const fila = n => (t[n] || (t[n]={id:n,nombre:n,oro:0,plata:0,bronce:0,puntos:0}));
+  // Sembrar cada paralelo base (un curso combinado A-B genera filas A y B)
+  cursos.forEach(c=> basesDe(c.nombre).forEach(fila));
   podios.forEach(p=>{
-    const d=dm[baseDisc(p.disciplina_id)], c=t[p.curso_id]; if(!d||!c) return;
-    if(p.puesto===1){c.oro++;   c.puntos+=d.puntos_1;}
-    if(p.puesto===2){c.plata++; c.puntos+=d.puntos_2;}
-    if(p.puesto===3){c.bronce++;c.puntos+=d.puntos_3;}
+    const d=dm[baseDisc(p.disciplina_id)], c=cById[p.curso_id]; if(!d||!c) return;
+    const bases=basesDe(c.nombre); const n=bases.length||1;
+    const pts = p.puesto===1?d.puntos_1 : p.puesto===2?d.puntos_2 : d.puntos_3;
+    bases.forEach(bn=>{ const r=fila(bn);
+      if(p.puesto===1) r.oro++; else if(p.puesto===2) r.plata++; else r.bronce++;
+      r.puntos += pts/n;
+    });
   });
   return Object.values(t).sort((a,b)=> b.puntos-a.puntos || b.oro-a.oro || b.plata-a.plata || a.nombre.localeCompare(b.nombre));
 }
@@ -484,12 +499,12 @@ async function renderPosiciones(){
   let c;
   try{ c = await ctx(); }catch(e){ cont.innerHTML='<div class="card"><div class="msg err">No se pudo conectar con la base de datos (Google Sheets). Verifica que el Apps Script esté publicado para \'Cualquiera\' y que la URL /exec esté bien pegada.</div></div>'; return; }
   let html = `<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M18 2C17.1 2 16 3 16 4H8C8 3 6.9 2 6 2H2V11C2 12 3 13 4 13H6.2C6.6 15 7.9 16.7 11 17V19.08C8 19.54 8 22 8 22H16C16 22 16 19.54 13 19.08V17C16.1 16.7 17.4 15 17.8 13H20C21 13 22 12 22 11V2H18M6 11H4V4H6V11M20 11H18V4H20V11Z" /></svg> Medallero general por paralelo/curso</h2>
-    <p class="sub">Suma de puntos por podios en todas las disciplinas.</p>`;
+    <p class="sub">Suma de puntos por podios (ambas ramas). En equipos combinados (p. ej. A-B) los puntos del podio se reparten en partes iguales entre sus paralelos.</p>`;
   if(!c.cursos.length){ html+=`<div class="empty">Aún no hay paralelos registrados.</div>`; }
   else {
     const med = calcularMedallero(c.cursos,c.disciplinas,c.podios);
     html+=`<table><thead><tr><th>#</th><th class="left">Paralelo/Curso</th><th>🥇</th><th>🥈</th><th>🥉</th><th>Puntos</th></tr></thead><tbody>`;
-    med.forEach((m,i)=> html+=`<tr class="${i===0&&m.puntos>0?'top1':''}"><td class="pos">${i+1}</td><td class="left">${esc(m.nombre)}</td><td>${m.oro}</td><td>${m.plata}</td><td>${m.bronce}</td><td><b>${m.puntos}</b></td></tr>`);
+    med.forEach((m,i)=> html+=`<tr class="${i===0&&m.puntos>0?'top1':''}"><td class="pos">${i+1}</td><td class="left">${esc(m.nombre)}</td><td>${m.oro}</td><td>${m.plata}</td><td>${m.bronce}</td><td><b>${fmtPts(m.puntos)}</b></td></tr>`);
     html+=`</tbody></table>`;
   }
   html+=`</div>`;
