@@ -250,7 +250,8 @@ function jsonp(extra){ return new Promise((res,rej)=>{ const cb='__oli_'+Math.ra
   s.src=u; document.body.appendChild(s); }); }
 function loadSnap(){ try{const s=localStorage.getItem('oli_snap'); return s?normalizeSheet(JSON.parse(s)):null;}catch(e){return null;} }
 function saveSnap(d){ try{localStorage.setItem('oli_snap',JSON.stringify(d));}catch(e){} }
-async function sheetsFetch(extra){ const r=await jsonp(extra||{}); if(r&&r.ok===false) throw new Error(r.error||'Error de la hoja'); return normalizeSheet((r&&r.data)||r); }
+async function httpGet(extra){ let u=CONFIG.SHEETS_URL+(CONFIG.SHEETS_URL.indexOf('?')>=0?'&':'?')+'t='+Date.now(); Object.keys(extra||{}).forEach(k=>{ u+='&'+k+'='+encodeURIComponent(extra[k]); }); const c=new AbortController(); const to=setTimeout(()=>c.abort(),15000); try{ const r=await fetch(u,{method:'GET',signal:c.signal}); const txt=await r.text(); return JSON.parse(txt); } finally{ clearTimeout(to); } }
+async function sheetsFetch(extra){ let r; try{ r=await httpGet(extra); }catch(e){ r=await jsonp(extra||{}); } if(r&&r.ok===false) throw new Error(r.error||'Error de la hoja'); return normalizeSheet((r&&r.data)||r); }
 async function sheetsEnsure(){ if(_data) return _data; if(!_inflight){ _inflight=sheetsFetch({}).then(d=>{ _data=d; saveSnap(d); setConn(true); _inflight=null; return d; }).catch(e=>{ _inflight=null; setConn(false); throw e; }); } return _inflight; }
 async function sheetsWrite(accion){ try{ const d=await sheetsFetch({q:JSON.stringify(accion)}); _data=d; saveSnap(d); setConn(true); return {ok:true,data:d}; }catch(e){ setConn(false); throw e; } }
 async function refreshData(){ try{ const d=await sheetsFetch({}); _data=d; saveSnap(d); setConn(true); reRenderActive(); }catch(e){ setConn(false); } }
