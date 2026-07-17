@@ -293,7 +293,7 @@ function dk3(did,prueba){ return did+'__'+RAMA+'__'+prueba; }
 function esGrupal(pr){ return /relevos|grupal/i.test(pr||''); }
 function esMixta(d){ return d.tipo!=='equipo' && tienePruebas(d.id) && PRUEBAS[d.id].some(esGrupal); }
 function tipoTxt(d){ return d.tipo==='equipo'?'Por equipo':(esMixta(d)?'Individual y por equipos':'Individual'); }
-function relevoHTML(){ let s=`<fieldset style="margin-top:8px"><legend>Datos de la posta (equipo de 4)</legend><div class="row"><div style="flex:1"><label>Nombre del equipo / posta <span class="req">*</span></label><input name="rel_equipo" placeholder="Ej: Los Veloces 5to A"></div></div>`; for(let i=1;i<=4;i++){ s+=`<div class="row"><div style="flex:1"><label>Participante ${i} <span class="req">*</span></label><input name="rel_p${i}" placeholder="Nombres y apellidos"></div></div>`; } s+=`</fieldset>`; return s; }
+function relevoHTML(){ let s=`<fieldset style="margin-top:8px"><legend>Datos de la posta (equipo de 4)</legend><div class="row"><div style="flex:1"><label>Nombre del equipo / posta <span class="req">*</span></label><input name="rel_equipo" placeholder="Ej: Los Veloces 5to A"></div></div>`; for(let i=1;i<=4;i++){ s+=`<div class="row"><div style="flex:2"><label>Participante ${i} <span class="req">*</span></label><input name="rel_p${i}" placeholder="Nombres y apellidos"></div><div style="flex:1"><label>Cédula <span class="req">*</span></label><input name="rel_c${i}" placeholder="C.I."></div></div>`; } s+=`</fieldset>`; return s; }
 function onPruebaChange(pr){ const g=esGrupal(pr); const b1=document.getElementById('bloqueIndiv1'); const br=document.getElementById('bloqueRelevo'); if(b1) b1.style.display=g?'none':''; if(br){ if(g){ br.style.display=''; if(!br.innerHTML) br.innerHTML=relevoHTML(); } else { br.style.display='none'; br.innerHTML=''; } } }
 function fijarPodios(c){ document.querySelectorAll('.pod').forEach(s=>{ const key=s.dataset.prueba?(s.dataset.d+'__'+RAMA+'__'+s.dataset.prueba):(s.dataset.d+'__'+RAMA); const f=c.podios.find(p=>String(p.disciplina_id)===key&&+p.puesto===+s.dataset.pu); s.value=f?f.curso_id:''; }); }
 function podioBloque(d,cursoOpts,prueba){ const suf=prueba?` data-prueba="${esc(prueba)}"`:''; const lbl=prueba?`<div class="mini" style="font-weight:800;color:#155c34;margin:12px 0 2px">${esc(prueba)}</div>`:''; return lbl+`<div class="grid2"><div><label>🥇 Oro (${d.puntos_1})</label><select class="pod" data-d="${d.id}" data-pu="1"${suf}>${cursoOpts}</select></div><div><label>🥈 Plata (${d.puntos_2})</label><select class="pod" data-d="${d.id}" data-pu="2"${suf}>${cursoOpts}</select></div><div><label>🥉 Bronce (${d.puntos_3})</label><select class="pod" data-d="${d.id}" data-pu="3"${suf}>${cursoOpts}</select></div></div>`; }
@@ -664,8 +664,10 @@ $('#form').addEventListener('submit',async e=>{
   if(selDisc.tipo==='equipo'){
     if(!f.equipo_nombre.value.trim()){ insMsg('Ingresa el nombre del equipo.','err'); return; }
     if(!f.equipo_rama.value){ insMsg('Selecciona la rama.','err'); return; }
-    const jug=[...document.querySelectorAll('#jugadores .jugador')].map(x=>({nombre:x.querySelector('.jNombre').value.trim(),cedula:x.querySelector('.jCedula').value.trim()})).filter(j=>j.nombre);
-    if(jug.length<selDisc.min_jug){ insMsg(`Registra al menos ${selDisc.min_jug} jugadores.`,'err'); return; }
+    const jug=[...document.querySelectorAll('#jugadores .jugador')].map(x=>({nombre:x.querySelector('.jNombre').value.trim(),cedula:x.querySelector('.jCedula').value.trim()})).filter(j=>j.nombre||j.cedula);
+    if(jug.some(j=>!j.nombre||!j.cedula)){ insMsg('Cada jugador debe tener nombre y cédula.','err'); return; }
+    if(jug.length<(+selDisc.min_jug||0)){ insMsg(`Este equipo requiere mínimo ${selDisc.min_jug} jugadores registrados (llevas ${jug.length}).`,'err'); return; }
+    if(selDisc.max_jug && jug.length>+selDisc.max_jug){ insMsg(`El máximo permitido es ${selDisc.max_jug} jugadores.`,'err'); return; }
     r.nombre_equipo=f.equipo_nombre.value.trim(); r.rama=f.equipo_rama.value; r.jugadores=jug;
   } else {
     if(!f.ind_rama.value){ insMsg('Selecciona la rama.','err'); return; }
@@ -675,7 +677,7 @@ $('#form').addEventListener('submit',async e=>{
     if(esGrupal(prueba)){
       const teamName=(f.rel_equipo&&f.rel_equipo.value.trim())||'';
       if(!teamName){ insMsg('Ingresa el nombre del equipo / posta.','err'); return; }
-      const parts=[]; for(let i=1;i<=4;i++){ const v=(f['rel_p'+i]&&f['rel_p'+i].value.trim())||''; if(!v){ insMsg('Registra los 4 participantes de la posta.','err'); return; } parts.push({nombre:v,cedula:''}); }
+      const parts=[]; for(let i=1;i<=4;i++){ const v=(f['rel_p'+i]&&f['rel_p'+i].value.trim())||''; const ci=(f['rel_c'+i]&&f['rel_c'+i].value.trim())||''; if(!v||!ci){ insMsg('Registra nombre y cédula de los 4 participantes de la posta.','err'); return; } parts.push({nombre:v,cedula:ci}); }
       r.participante=teamName; r.jugadores=parts; r.responsable.nombre=teamName;
     } else {
       if(!f.ind_nombre.value.trim()||!f.ind_cedula.value.trim()){ insMsg('Completa los datos del participante.','err'); return; }
