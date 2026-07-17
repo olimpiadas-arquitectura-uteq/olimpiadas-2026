@@ -191,6 +191,7 @@ details.acc .accbody{margin-top:14px}
         <div class="row">
           <div><label>Rama <span class="req">*</span></label><select name="ind_rama"><option value="">Selecciona…</option><option>Masculino</option><option>Femenino</option></select></div>
         </div>
+        <div class="row" id="bloquePrueba" style="display:none"></div>
       </fieldset>
 
       <div id="bloqueContacto" class="hidden">
@@ -282,6 +283,11 @@ function setConn(ok){ _connOk=ok; const b=document.getElementById('modoBadge'); 
 let RAMA='Masculino';
 function dk(did){ return did+'__'+RAMA; }
 function baseDisc(k){ return String(k).split('__')[0]; }
+const PRUEBAS = { natacion:["25 m libre","50 m libre","25 m pecho","25 m Mariposa","Relevos 4x25 todos los estilos"], atletismo:["100 m"] };
+function tienePruebas(did){ return !!(PRUEBAS[did]&&PRUEBAS[did].length); }
+function dk3(did,prueba){ return did+'__'+RAMA+'__'+prueba; }
+function fijarPodios(c){ document.querySelectorAll('.pod').forEach(s=>{ const key=s.dataset.prueba?(s.dataset.d+'__'+RAMA+'__'+s.dataset.prueba):(s.dataset.d+'__'+RAMA); const f=c.podios.find(p=>String(p.disciplina_id)===key&&+p.puesto===+s.dataset.pu); s.value=f?f.curso_id:''; }); }
+function podioBloque(d,cursoOpts,prueba){ const suf=prueba?` data-prueba="${esc(prueba)}"`:''; const lbl=prueba?`<div class="mini" style="font-weight:800;color:#155c34;margin:12px 0 2px">${esc(prueba)}</div>`:''; return lbl+`<div class="grid2"><div><label>🥇 Oro (${d.puntos_1})</label><select class="pod" data-d="${d.id}" data-pu="1"${suf}>${cursoOpts}</select></div><div><label>🥈 Plata (${d.puntos_2})</label><select class="pod" data-d="${d.id}" data-pu="2"${suf}>${cursoOpts}</select></div><div><label>🥉 Bronce (${d.puntos_3})</label><select class="pod" data-d="${d.id}" data-pu="3"${suf}>${cursoOpts}</select></div></div>`; }
 function ramaBar(){ return '<div class="ramabar">'
   +'<button class="rb'+(RAMA==='Masculino'?' act':'')+'" data-rama="Masculino">\u2642 Masculino</button>'
   +'<button class="rb'+(RAMA==='Femenino'?' act':'')+'" data-rama="Femenino">\u2640 Femenino</button></div>'; }
@@ -550,7 +556,14 @@ async function renderPosiciones(){
         html+=`</tbody></table>`;
       }
     }
-    if(podio.length){
+    if(d.tipo!=='equipo' && tienePruebas(d.id)){
+      PRUEBAS[d.id].forEach(pr=>{
+        const pp=c.podios.filter(p=>String(p.disciplina_id)===dk3(d.id,pr)).sort((a,b)=>a.puesto-b.puesto);
+        html+=`<h4 style="margin:12px 0 4px">${esc(pr)}</h4>`;
+        if(pp.length){ html+=`<div>`; pp.forEach(p=>html+=`<span class="chip">${medalIco(p.puesto)} <b>${esc(c.cursoNombre(p.curso_id))}</b></span>`); html+=`</div>`; }
+        else html+=`<div class="mini">Podio aún no definido.</div>`;
+      });
+    } else if(podio.length){
       html+=`<h3>Podio</h3><div>`;
       podio.forEach(p=>html+=`<span class="chip">${medalIco(p.puesto)} <b>${esc(c.cursoNombre(p.curso_id))}</b></span>`);
       html+=`</div>`;
@@ -608,6 +621,7 @@ function selDisciplina(d){
   const eq=d.tipo==='equipo';
   $('#bloqueEquipo').classList.toggle('hidden',!eq);
   $('#bloqueIndividual').classList.toggle('hidden',eq);
+  { const bp=$('#bloquePrueba'); if(!eq && tienePruebas(d.id)){ bp.style.display=''; bp.innerHTML=`<div style="flex:1"><label>Prueba <span class="req">*</span></label><select name="ind_prueba"><option value="">Selecciona…</option>${PRUEBAS[d.id].map(pr=>`<option>${pr}</option>`).join('')}</select></div>`; } else { bp.style.display='none'; bp.innerHTML=''; } }
   $('#bloqueContacto').classList.remove('hidden');
   $('#respNombreWrap').style.display = eq?'':'none';
   $('#respNota').style.display = eq?'none':'block';
@@ -647,6 +661,7 @@ $('#form').addEventListener('submit',async e=>{
     if(!f.ind_nombre.value.trim()||!f.ind_cedula.value.trim()){ insMsg('Completa los datos del participante.','err'); return; }
     if(!f.ind_rama.value){ insMsg('Selecciona la rama.','err'); return; }
     r.participante=f.ind_nombre.value.trim(); r.cedula_part=f.ind_cedula.value.trim(); r.rama=f.ind_rama.value;
+    if(tienePruebas(selDisc.id)){ const pr=(f.ind_prueba&&f.ind_prueba.value)||''; if(!pr){ insMsg('Selecciona la prueba.','err'); return; } r.categoria=pr; }
   }
   const btn=$('#btnEnviar'); btn.disabled=true; btn.textContent='Enviando…';
   try{
@@ -701,13 +716,10 @@ function vistaDisciplina(c, did){
   const inscHTML=gestionInscritosHTML(d, misInsc, c);
   if(d.tipo==='individual'){
     const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
-    const get=pu=>(c.podios.find(p=>p.disciplina_id===dk(did)&&p.puesto===pu)||{}).curso_id||'';
-    h+=`<h3>Define los ganadores (podio) \u2014 rama ${RAMA}</h3><div class="grid2">
-      <div><label>🥇 Oro</label><select class="pod" data-d="${did}" data-pu="1">${cursoOpts}</select></div>
-      <div><label>🥈 Plata</label><select class="pod" data-d="${did}" data-pu="2">${cursoOpts}</select></div>
-      <div><label>🥉 Bronce</label><select class="pod" data-d="${did}" data-pu="3">${cursoOpts}</select></div>
-    </div></div>`;
-    setTimeout(()=>{ [1,2,3].forEach(pu=>{ const s=document.querySelector('.pod[data-d="'+did+'"][data-pu="'+pu+'"]'); if(s) s.value=get(pu); }); },0);
+    h+=`<h3>Define los ganadores (podio) \u2014 rama ${RAMA}</h3>`;
+    if(tienePruebas(did)){ h+=`<p class="mini" style="margin-top:0">Cada prueba tiene su propio podio.</p>`; PRUEBAS[did].forEach(pr=> h+=podioBloque(d,cursoOpts,pr)); }
+    else h+=podioBloque(d,cursoOpts,null);
+    h+=`</div>`;
     return h + inscHTML;
   }
   if(!t||!t.grupos){ h+=`<div class="empty">El organizador aún no ha realizado el sorteo de tu disciplina.</div></div>`; return h + inscHTML; }
@@ -793,16 +805,15 @@ async function renderAdmin(){
     <p class="sub">Define Oro/Plata/Bronce por disciplina. Para ligas puedes autocompletar desde la tabla.</p>`;
   const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
   c.disciplinas.forEach(d=>{
-    const get=pu=>(c.podios.find(p=>p.disciplina_id===dk(d.id)&&p.puesto===pu)||{}).curso_id||'';
-    h+=`<details><summary>${ico(d.id)} ${esc(d.nombre)} (${RAMA})</summary><div style="padding-bottom:12px">
-      <div class="grid2">
-        <div><label>🥇 Oro (${d.puntos_1} pts)</label><select class="pod" data-d="${d.id}" data-pu="1">${cursoOpts}</select></div>
-        <div><label>🥈 Plata (${d.puntos_2} pts)</label><select class="pod" data-d="${d.id}" data-pu="2">${cursoOpts}</select></div>
-        <div><label>🥉 Bronce (${d.puntos_3} pts)</label><select class="pod" data-d="${d.id}" data-pu="3">${cursoOpts}</select></div>
-      </div>`;
-    if(d.tipo==='equipo') h+=`<button class="btn gris sm" data-auto="${d.id}" style="margin-top:12px">⚙ Autocompletar desde la liga</button>`;
+    h+=`<details><summary>${ico(d.id)} ${esc(d.nombre)} (${RAMA})</summary><div style="padding-bottom:12px">`;
+    if(d.tipo!=='equipo' && tienePruebas(d.id)){
+      h+=`<p class="mini" style="margin-top:0">Cada prueba tiene su propio podio.</p>`;
+      PRUEBAS[d.id].forEach(pr=> h+=podioBloque(d,cursoOpts,pr));
+    } else {
+      h+=podioBloque(d,cursoOpts,null);
+      if(d.tipo==='equipo') h+=`<button class="btn gris sm" data-auto="${d.id}" style="margin-top:12px">⚙ Autocompletar desde la liga</button>`;
+    }
     h+=`</div></details>`;
-    setTimeout(()=>{ [1,2,3].forEach(pu=>{ const s=document.querySelector(`.pod[data-d="${d.id}"][data-pu="${pu}"]`); if(s) s.value=get(pu); }); },0);
   });
   h+=`</div>`;
 
@@ -867,7 +878,8 @@ function bindAdmin(c){
     await DB.updatePartido(id,{gl:+gl,gv:+gv,jugado:true}); renderAdmin();
   });
   document.querySelectorAll('[data-del-partido]').forEach(b=>b.onclick=async()=>{ await DB.delPartido(b.dataset.delPartido); renderAdmin(); });
-  document.querySelectorAll('.pod').forEach(s=>s.onchange=async()=>{ await DB.setPodio(dk(s.dataset.d),+s.dataset.pu,s.value||null); });
+  document.querySelectorAll('.pod').forEach(s=>s.onchange=async()=>{ const key=s.dataset.prueba?dk3(s.dataset.d,s.dataset.prueba):dk(s.dataset.d); await DB.setPodio(key,+s.dataset.pu,s.value||null); });
+  fijarPodios(c);
   document.querySelectorAll('[data-auto]').forEach(b=>b.onclick=async()=>{
     const did=b.dataset.auto;
     const equipos=c.inscripciones.filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA);
