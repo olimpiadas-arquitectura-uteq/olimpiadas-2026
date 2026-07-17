@@ -836,7 +836,15 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
   function check(){ if(((location.hash||'').toLowerCase().replace('#',''))==='admin') reveal(true); }
   window.addEventListener('hashchange',check); check();
   const tit=document.getElementById('tituloEvento');
-  if(tit){ let n=0,last=0; tit.addEventListener('click',function(){ const t=Date.now(); n=(t-last<2500)?n+1:1; last=t; if(n>=5){ n=0; reveal(true); } }); }
+  if(tit){
+    tit.style.userSelect='none'; tit.style.webkitUserSelect='none'; tit.style.cursor='default';
+    // Gesto 1: 5 toques rápidos al título
+    let n=0,last=0; tit.addEventListener('click',function(){ const t=Date.now(); n=(t-last<2500)?n+1:1; last=t; if(n>=5){ n=0; reveal(true); } });
+    // Gesto 2: mantener pulsado ~1.2 s (móvil y PC)
+    let tmr=null; const start=function(){ clearTimeout(tmr); tmr=setTimeout(function(){ reveal(true); },1200); }; const stop=function(){ clearTimeout(tmr); };
+    tit.addEventListener('mousedown',start); tit.addEventListener('touchstart',start,{passive:true});
+    ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(function(ev){ tit.addEventListener(ev,stop); });
+  }
 })();
 if(MODE==='sheets'){ _data=loadSnap(); }
 renderPosiciones();
