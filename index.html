@@ -130,11 +130,13 @@
 <div class="wrap">
   <nav class="tabs">
     <button data-tab="posiciones" class="act"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M18 2C17.1 2 16 3 16 4H8C8 3 6.9 2 6 2H2V11C2 12 3 13 4 13H6.2C6.6 15 7.9 16.7 11 17V19.08C8 19.54 8 22 8 22H16C16 22 16 19.54 13 19.08V17C16.1 16.7 17.4 15 17.8 13H20C21 13 22 12 22 11V2H18M6 11H4V4H6V11M20 11H18V4H20V11Z" /></svg> Posiciones</button>
+    <button data-tab="calendario"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3 3.9 3 5V19A2 2 0 0 0 5 21H19A2 2 0 0 0 21 19V5C21 3.9 20.1 3 19 3M19 19H5V9H19V19M19 7H5V5H19V7M7 11H12V16H7V11Z" /></svg> Calendario</button>
     <button data-tab="inscripcion"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21.04 12.13C21.18 12.13 21.31 12.19 21.42 12.3L22.7 13.58C22.92 13.79 22.92 14.14 22.7 14.35L21.7 15.35L19.65 13.3L20.65 12.3C20.76 12.19 20.9 12.13 21.04 12.13M19.07 13.88L21.12 15.93L15.06 22H13V19.94L19.07 13.88M11 19L9 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H9.18C9.6 1.84 10.7 1 12 1C13.3 1 14.4 1.84 14.82 3H19C20.1 3 21 3.9 21 5V9L19 11V5H17V7H7V5H5V19H11M12 3C11.45 3 11 3.45 11 4C11 4.55 11.45 5 12 5C12.55 5 13 4.55 13 4C13 3.45 12.55 3 12 3Z" /></svg> Inscripción</button>
     <button data-tab="admin"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" /></svg> Administración</button>
   </nav>
 
   <section id="tab-posiciones"></section>
+    <section id="tab-calendario" class="hidden"></section>
 
   <section id="tab-inscripcion" class="hidden">
     <form id="form" class="card">
@@ -254,9 +256,10 @@ function jsonp(extra){ return new Promise((res,rej)=>{ const cb='__oli_'+Math.ra
 function loadSnap(){ try{const s=localStorage.getItem('oli_snap'); return s?normalizeSheet(JSON.parse(s)):null;}catch(e){return null;} }
 function saveSnap(d){ try{localStorage.setItem('oli_snap',JSON.stringify(d));}catch(e){} }
 async function httpGet(extra){ let u=CONFIG.SHEETS_URL+(CONFIG.SHEETS_URL.indexOf('?')>=0?'&':'?')+'t='+Date.now(); Object.keys(extra||{}).forEach(k=>{ u+='&'+k+'='+encodeURIComponent(extra[k]); }); const c=new AbortController(); const to=setTimeout(()=>c.abort(),15000); try{ const r=await fetch(u,{method:'GET',signal:c.signal}); const txt=await r.text(); return JSON.parse(txt); } finally{ clearTimeout(to); } }
+async function httpPost(accion){ const c=new AbortController(); const to=setTimeout(()=>c.abort(),25000); try{ const r=await fetch(CONFIG.SHEETS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(accion),signal:c.signal}); const txt=await r.text(); return JSON.parse(txt); } finally{ clearTimeout(to); } }
 async function sheetsFetch(extra){ let r; try{ r=await httpGet(extra); }catch(e){ r=await jsonp(extra||{}); } if(r&&r.ok===false) throw new Error(r.error||'Error de la hoja'); return normalizeSheet((r&&r.data)||r); }
 async function sheetsEnsure(){ if(_data) return _data; if(!_inflight){ _inflight=sheetsFetch({}).then(d=>{ _data=d; saveSnap(d); setConn(true); _inflight=null; return d; }).catch(e=>{ _inflight=null; setConn(false); throw e; }); } return _inflight; }
-async function sheetsWrite(accion){ try{ const d=await sheetsFetch({q:JSON.stringify(accion)}); _data=d; saveSnap(d); setConn(true); return {ok:true,data:d}; }catch(e){ setConn(false); throw e; } }
+async function sheetsWrite(accion){ try{ let raw; try{ raw=await httpPost(accion); }catch(e){ raw=await httpGet({q:JSON.stringify(accion)}); } if(raw&&raw.ok===false) throw new Error(raw.error||'Error de la hoja'); const d=normalizeSheet((raw&&raw.data)||raw); _data=d; saveSnap(d); setConn(true); return {ok:true,data:d}; }catch(e){ setConn(false); throw e; } }
 async function refreshData(){ try{ const d=await sheetsFetch({}); _data=d; saveSnap(d); setConn(true); reRenderActive(); }catch(e){ setConn(false); } }
 function setConn(ok){ _connOk=ok; const b=document.getElementById('modoBadge'); if(!b||MODE==='local') return; b.innerHTML='<span class="dot '+(ok?'on':'off')+'"></span>'+(ok?'Conectado a la base de datos':'Sin conexión — mostrando datos guardados'); }
 let RAMA='Masculino';
@@ -270,7 +273,7 @@ function setRama(r){ if(r===RAMA) return; RAMA=r;
   if(!document.getElementById('tab-admin').classList.contains('hidden')) renderAdmin();
   else renderPosiciones();
 }
-function reRenderActive(){ try{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); }catch(e){} }
+function reRenderActive(){ try{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); if(!document.getElementById('tab-calendario').classList.contains('hidden')) renderCalendario(); }catch(e){} }
 
 const DISCIPLINAS_DEMO = [
   {id:'futbol',nombre:'Fútbol',tipo:'equipo',min_jug:7,max_jug:15,puntos_1:10,puntos_2:7,puntos_3:5,orden:1},
@@ -342,12 +345,19 @@ function ganador(p){return (+p.gl>+p.gv)?p.local_id:p.visitante_id;}
 function perdedor(p){return (+p.gl>+p.gv)?p.visitante_id:p.local_id;}
 function nombreEq(equipos,id){const e=equipos.find(x=>x.id===id);return e?esc(e.nombre_equipo):'—';}
 
+async function syncPartidos(removeIds, nuevos){
+  const rows=(nuevos||[]).map(n=>({...n,id:uid(),creado:new Date().toISOString()}));
+  for(const id of (removeIds||[])) await DB.delPartido(id);
+  if(!rows.length) return;
+  if(MODE==='sheets'){ await sheetsWrite({action:'bulk', data:{partidos:rows}}); }
+  else { for(const r of rows) await DB.addPartido(r); }
+}
 async function sortearTorneo(did,nGrupos,clasifican,slots){
   const equipos=(await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA);
   if(equipos.length<2){alert('Se necesitan al menos 2 equipos en la rama '+RAMA+'.');return;}
   const eqset=new Set(equipos.map(e=>e.id));
   nGrupos=Math.max(1,Math.min(nGrupos,Math.floor(equipos.length/2)||1));
-  for(const p of (await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id))) await DB.delPartido(p.id);
+  const removeIds=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).map(p=>p.id);
   const ids=shuffle(equipos.map(e=>e.id));
   const letras='ABCDEFGH';const grupos={};
   for(let i=0;i<nGrupos;i++)grupos[letras[i]]=[];
@@ -357,8 +367,9 @@ async function sortearTorneo(did,nGrupos,clasifican,slots){
   const maxR=Math.max(0,...rondas.map(r=>r.length));
   const matches=[];
   for(let r=0;r<maxR;r++)gks.forEach((g,gi)=>{(rondas[gi][r]||[]).forEach(par=>matches.push({par,grupo:g}));});
-  let idx=0;
-  for(const m of matches){await DB.addPartido({disciplina_id:did,local_id:m.par[0],visitante_id:m.par[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:'grupo',grupo:m.grupo,orden:idx});idx++;}
+  const nuevos=[]; let idx=0;
+  for(const m of matches){nuevos.push({disciplina_id:did,local_id:m.par[0],visitante_id:m.par[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:'grupo',grupo:m.grupo,orden:idx});idx++;}
+  await syncPartidos(removeIds,nuevos);
   await DB.setTorneo(dk(did),{nGrupos,clasifican,grupos,slots,fase:'grupos'});
   renderAdmin();
 }
@@ -375,11 +386,12 @@ async function generarEliminatorias(did){
   let pw=1;while(pw*2<=seeds.length)pw*=2;const use=seeds.slice(0,pw);
   if(use.length<2){alert('No hay suficientes clasificados para armar llaves.');return;}
   const pairs=[];for(let i=0;i<use.length/2;i++)pairs.push([use[i],use[use.length-1-i]]);
-  for(const p of parts.filter(p=>p.fase!=='grupo'))await DB.delPartido(p.id);
+  const removeIds=parts.filter(p=>p.fase!=='grupo').map(p=>p.id);
   const fase= use.length>=8?'cuartos':use.length>=4?'semi':'final';
   const slots=t.slots.slice(gp.length);
-  let idx=0,ord=1000;
-  for(const pr of pairs){await DB.addPartido({disciplina_id:did,local_id:pr[0],visitante_id:pr[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase,grupo:'',orden:ord++});idx++;}
+  const nuevos=[]; let idx=0,ord=1000;
+  for(const pr of pairs){nuevos.push({disciplina_id:did,local_id:pr[0],visitante_id:pr[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase,grupo:'',orden:ord++});idx++;}
+  await syncPartidos(removeIds,nuevos);
   await DB.setTorneo(dk(did),{...t,fase:'eliminatorias'});
   renderAdmin();
 }
@@ -396,9 +408,10 @@ async function avanzarRonda(did){
   const usados=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).length;
   const slots=(t.slots||[]).slice(usados);
   const win=cp.map(ganador);const next=cur==='cuartos'?'semi':'final';
-  let idx=0,ord=2000;
-  for(let i=0;i<win.length;i+=2){await DB.addPartido({disciplina_id:did,local_id:win[i],visitante_id:win[i+1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:next,grupo:'',orden:ord++});idx++;}
-  if(cur==='semi'){const los=cp.map(perdedor);await DB.addPartido({disciplina_id:did,local_id:los[0],visitante_id:los[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:'tercer',grupo:'',orden:ord++});}
+  const nuevos=[]; let idx=0,ord=2000;
+  for(let i=0;i<win.length;i+=2){nuevos.push({disciplina_id:did,local_id:win[i],visitante_id:win[i+1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:next,grupo:'',orden:ord++});idx++;}
+  if(cur==='semi'){const los=cp.map(perdedor);nuevos.push({disciplina_id:did,local_id:los[0],visitante_id:los[1],gl:null,gv:null,jugado:false,fecha:slots[idx]||'',fase:'tercer',grupo:'',orden:ord++});}
+  await syncPartidos([],nuevos);
   renderAdmin();
 }
 
@@ -450,8 +463,9 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('act'));
     b.classList.add('act');
-    ['posiciones','inscripcion','admin'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    ['posiciones','calendario','inscripcion','admin'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
     if(b.dataset.tab==='posiciones') renderPosiciones();
+    if(b.dataset.tab==='calendario') renderCalendario();
     if(b.dataset.tab==='inscripcion') renderInscripcionCursos();
   };
 });
@@ -511,6 +525,35 @@ async function renderPosiciones(){
     html+=`</div>`;
   });
   cont.innerHTML=html; bindRama();
+}
+
+async function renderCalendario(){
+  const cont=$('#tab-calendario'); let c;
+  try{ c=await ctx(); }catch(e){ cont.innerHTML='<div class="card"><div class="msg err">No se pudo conectar con la base de datos.</div></div>'; return; }
+  let html=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3 3.9 3 5V19A2 2 0 0 0 5 21H19A2 2 0 0 0 21 19V5C21 3.9 20.1 3 19 3M19 19H5V9H19V19M19 7H5V5H19V7M7 11H12V16H7V11Z" /></svg> Calendario de partidos</h2>
+    <p class="sub">Todos los encuentros programados por disciplina y rama, con su horario. Se actualiza al registrar marcadores.</p></div>`;
+  let any=false;
+  c.disciplinas.filter(d=>d.tipo==='equipo').forEach(d=>{
+    ['Masculino','Femenino'].forEach(rama=>{
+      const equipos=c.inscripciones.filter(x=>x.disciplina_id===d.id&&x.tipo==='equipo'&&x.rama===rama);
+      const eqids=new Set(equipos.map(e=>e.id));
+      const parts=c.partidos.filter(pp=>pp.disciplina_id===d.id&&eqids.has(pp.local_id)).sort((a,b)=>a.orden-b.orden);
+      if(!parts.length) return;
+      any=true;
+      const emo=rama==='Masculino'?'♂':'♀';
+      html+=`<div class="card"><h3 class="sec" style="margin:0 0 6px">${ico(d.id)} ${esc(d.nombre)} — ${rama} ${emo}</h3>`;
+      const gp=parts.filter(pp=>pp.fase==='grupo');
+      if(gp.length){ html+=`<h4 style="margin:8px 0 4px">Fase de grupos</h4><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Resultado</th></tr></thead><tbody>`; gp.forEach(pp=>html+=filaCal(pp,equipos)); html+=`</tbody></table>`; }
+      ['cuartos','semi','final','tercer'].forEach(f=>{ const ms=parts.filter(pp=>pp.fase===f); if(!ms.length)return; html+=`<h4 style="margin:10px 0 4px">${FASE_NOM[f]}</h4><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Resultado</th></tr></thead><tbody>`; ms.forEach(pp=>html+=filaCal(pp,equipos)); html+=`</tbody></table>`; });
+      html+=`</div>`;
+    });
+  });
+  if(!any) html+=`<div class="card"><div class="empty">Aún no hay partidos programados. El organizador debe realizar el sorteo en Administración.</div></div>`;
+  cont.innerHTML=html;
+}
+function filaCal(p,equipos){
+  const res = p.jugado ? `<b>${p.gl}–${p.gv}</b>` : '<span class="mini">por jugar</span>';
+  return `<tr><td class="mini left"><b>${esc(p.fecha||'Sin horario')}</b></td><td class="left">${nombreEq(equipos,p.local_id)} <b>vs</b> ${nombreEq(equipos,p.visitante_id)}</td><td>${res}</td></tr>`;
 }
 
 let selDisc=null;
@@ -764,7 +807,7 @@ function bindAdmin(c){
   document.querySelectorAll('[data-elim]').forEach(b=>b.onclick=()=>generarEliminatorias(b.dataset.elim));
   document.querySelectorAll('[data-avanzar]').forEach(b=>b.onclick=()=>avanzarRonda(b.dataset.avanzar));
   document.querySelectorAll('[data-podio-bracket]').forEach(b=>b.onclick=()=>podioDesdeBracket(b.dataset.podioBracket));
-  document.querySelectorAll('[data-reset-torneo]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar el sorteo y los partidos de esta disciplina en la rama '+RAMA+'?'))return; const did=b.dataset.resetTorneo; const eqset=new Set((await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); for(const p of (await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)))await DB.delPartido(p.id); await DB.setTorneo(dk(did),null); renderAdmin(); });
+  document.querySelectorAll('[data-reset-torneo]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar el sorteo y los partidos de esta disciplina en la rama '+RAMA+'?'))return; const did=b.dataset.resetTorneo; const eqset=new Set((await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); const removeIds=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).map(p=>p.id); await syncPartidos(removeIds,[]); await DB.setTorneo(dk(did),null); renderAdmin(); });
   bindRama();
 }
 
