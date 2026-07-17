@@ -706,8 +706,8 @@ $('#pinInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pinBtn').
 
 function gestionInscritosHTML(d, insc, c){
   let s=`<details class="card acc" open><summary><span class="sec">✎ Inscritos — corregir o eliminar (${insc.length})</span></summary><div class="accbody">
-    <p class="mini" style="margin-top:0">Solo tu disciplina y la rama activa. “Editar” te deja corregir nombre, paralelo y rama.</p>`;
-  if(!insc.length){ s+=`<div class="empty">Sin inscritos en esta rama.</div>`; }
+    <p class="mini" style="margin-top:0">Filtra por género. “Editar” te deja corregir nombre, paralelo y rama.</p>${insFiltroBar()}`;
+  if(!insc.length){ s+=`<div class="empty">Sin inscritos${INS_RAMA==='Todos'?'':' en la rama '+INS_RAMA}.</div>`; }
   insc.forEach(x=>{
     const quien = d.tipo==='equipo'
       ? `<b>${esc(x.nombre_equipo)}</b> · ${esc(c.cursoNombre(x.curso_id))}`
@@ -729,7 +729,7 @@ function vistaDisciplina(c, did){
   const t=c.torneos[dk(did)];
   let h=`<div class="card"><div class="flex-between"><h2 class="sec">${ico(did)} ${esc(d.nombre)}</h2><span class="pill">Responsable de disciplina</span></div>
     <p class="sub">Registra aquí los resultados de tu disciplina (quién ganó o perdió). Los sorteos los realiza el organizador.</p>${ramaBar()}`;
-  const misInsc=c.inscripciones.filter(x=>x.disciplina_id===did&&x.rama===RAMA);
+  const misInsc=c.inscripciones.filter(x=>x.disciplina_id===did && (INS_RAMA==='Todos'||x.rama===INS_RAMA));
   const inscHTML=gestionInscritosHTML(d, misInsc, c);
   if(d.tipo==='individual'){
     const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
