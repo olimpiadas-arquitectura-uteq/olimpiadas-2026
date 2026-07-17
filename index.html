@@ -184,7 +184,7 @@ details.acc .accbody{margin-top:14px}
 
       <fieldset id="bloqueIndividual" class="hidden">
         <legend>Datos del participante</legend>
-        <div class="row">
+        <div class="row" id="bloqueIndiv1">
           <div><label>Nombre del participante <span class="req">*</span></label><input name="ind_nombre" placeholder="Nombres y apellidos"></div>
           <div><label>Cédula <span class="req">*</span></label><input name="ind_cedula" placeholder="0000000000"></div>
         </div>
@@ -192,6 +192,7 @@ details.acc .accbody{margin-top:14px}
           <div><label>Rama <span class="req">*</span></label><select name="ind_rama"><option value="">Selecciona…</option><option>Masculino</option><option>Femenino</option></select></div>
         </div>
         <div class="row" id="bloquePrueba" style="display:none"></div>
+        <div id="bloqueRelevo" style="display:none"></div>
       </fieldset>
 
       <div id="bloqueContacto" class="hidden">
@@ -286,6 +287,9 @@ function baseDisc(k){ return String(k).split('__')[0]; }
 const PRUEBAS = { natacion:["25 m libre","50 m libre","25 m pecho","25 m Mariposa","Relevos 4x25 todos los estilos"], atletismo:["100 m","Relevos 4x100 (grupal)"] };
 function tienePruebas(did){ return !!(PRUEBAS[did]&&PRUEBAS[did].length); }
 function dk3(did,prueba){ return did+'__'+RAMA+'__'+prueba; }
+function esGrupal(pr){ return /relevos|grupal/i.test(pr||''); }
+function relevoHTML(){ let s=`<fieldset style="margin-top:8px"><legend>Datos de la posta (equipo de 4)</legend><div class="row"><div style="flex:1"><label>Nombre del equipo / posta <span class="req">*</span></label><input name="rel_equipo" placeholder="Ej: Los Veloces 5to A"></div></div>`; for(let i=1;i<=4;i++){ s+=`<div class="row"><div style="flex:1"><label>Participante ${i} <span class="req">*</span></label><input name="rel_p${i}" placeholder="Nombres y apellidos"></div></div>`; } s+=`</fieldset>`; return s; }
+function onPruebaChange(pr){ const g=esGrupal(pr); const b1=document.getElementById('bloqueIndiv1'); const br=document.getElementById('bloqueRelevo'); if(b1) b1.style.display=g?'none':''; if(br){ if(g){ br.style.display=''; if(!br.innerHTML) br.innerHTML=relevoHTML(); } else { br.style.display='none'; br.innerHTML=''; } } }
 function fijarPodios(c){ document.querySelectorAll('.pod').forEach(s=>{ const key=s.dataset.prueba?(s.dataset.d+'__'+RAMA+'__'+s.dataset.prueba):(s.dataset.d+'__'+RAMA); const f=c.podios.find(p=>String(p.disciplina_id)===key&&+p.puesto===+s.dataset.pu); s.value=f?f.curso_id:''; }); }
 function podioBloque(d,cursoOpts,prueba){ const suf=prueba?` data-prueba="${esc(prueba)}"`:''; const lbl=prueba?`<div class="mini" style="font-weight:800;color:#155c34;margin:12px 0 2px">${esc(prueba)}</div>`:''; return lbl+`<div class="grid2"><div><label>🥇 Oro (${d.puntos_1})</label><select class="pod" data-d="${d.id}" data-pu="1"${suf}>${cursoOpts}</select></div><div><label>🥈 Plata (${d.puntos_2})</label><select class="pod" data-d="${d.id}" data-pu="2"${suf}>${cursoOpts}</select></div><div><label>🥉 Bronce (${d.puntos_3})</label><select class="pod" data-d="${d.id}" data-pu="3"${suf}>${cursoOpts}</select></div></div>`; }
 function ramaBar(){ return '<div class="ramabar">'
@@ -621,7 +625,7 @@ function selDisciplina(d){
   const eq=d.tipo==='equipo';
   $('#bloqueEquipo').classList.toggle('hidden',!eq);
   $('#bloqueIndividual').classList.toggle('hidden',eq);
-  { const bp=$('#bloquePrueba'); if(!eq && tienePruebas(d.id)){ bp.style.display=''; bp.innerHTML=`<div style="flex:1"><label>Prueba <span class="req">*</span></label><select name="ind_prueba"><option value="">Selecciona…</option>${PRUEBAS[d.id].map(pr=>`<option>${pr}</option>`).join('')}</select></div>`; } else { bp.style.display='none'; bp.innerHTML=''; } }
+  { const bp=$('#bloquePrueba'); if(!eq && tienePruebas(d.id)){ bp.style.display=''; bp.innerHTML=`<div style="flex:1"><label>Prueba <span class="req">*</span></label><select name="ind_prueba" onchange="onPruebaChange(this.value)"><option value="">Selecciona…</option>${PRUEBAS[d.id].map(pr=>`<option>${pr}</option>`).join('')}</select></div>`; } else { bp.style.display='none'; bp.innerHTML=''; } onPruebaChange(''); }
   $('#bloqueContacto').classList.remove('hidden');
   $('#respNombreWrap').style.display = eq?'':'none';
   $('#respNota').style.display = eq?'none':'block';
@@ -658,10 +662,19 @@ $('#form').addEventListener('submit',async e=>{
     if(jug.length<selDisc.min_jug){ insMsg(`Registra al menos ${selDisc.min_jug} jugadores.`,'err'); return; }
     r.nombre_equipo=f.equipo_nombre.value.trim(); r.rama=f.equipo_rama.value; r.jugadores=jug;
   } else {
-    if(!f.ind_nombre.value.trim()||!f.ind_cedula.value.trim()){ insMsg('Completa los datos del participante.','err'); return; }
     if(!f.ind_rama.value){ insMsg('Selecciona la rama.','err'); return; }
-    r.participante=f.ind_nombre.value.trim(); r.cedula_part=f.ind_cedula.value.trim(); r.rama=f.ind_rama.value;
-    if(tienePruebas(selDisc.id)){ const pr=(f.ind_prueba&&f.ind_prueba.value)||''; if(!pr){ insMsg('Selecciona la prueba.','err'); return; } r.categoria=pr; }
+    r.rama=f.ind_rama.value;
+    let prueba='';
+    if(tienePruebas(selDisc.id)){ prueba=(f.ind_prueba&&f.ind_prueba.value)||''; if(!prueba){ insMsg('Selecciona la prueba.','err'); return; } r.categoria=prueba; }
+    if(esGrupal(prueba)){
+      const teamName=(f.rel_equipo&&f.rel_equipo.value.trim())||'';
+      if(!teamName){ insMsg('Ingresa el nombre del equipo / posta.','err'); return; }
+      const parts=[]; for(let i=1;i<=4;i++){ const v=(f['rel_p'+i]&&f['rel_p'+i].value.trim())||''; if(!v){ insMsg('Registra los 4 participantes de la posta.','err'); return; } parts.push({nombre:v,cedula:''}); }
+      r.participante=teamName; r.jugadores=parts; r.responsable.nombre=teamName;
+    } else {
+      if(!f.ind_nombre.value.trim()||!f.ind_cedula.value.trim()){ insMsg('Completa los datos del participante.','err'); return; }
+      r.participante=f.ind_nombre.value.trim(); r.cedula_part=f.ind_cedula.value.trim();
+    }
   }
   const btn=$('#btnEnviar'); btn.disabled=true; btn.textContent='Enviando…';
   try{
