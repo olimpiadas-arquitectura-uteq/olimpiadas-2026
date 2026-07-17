@@ -113,6 +113,21 @@
 .ramabar{display:flex;gap:8px;justify-content:center;margin:10px 0 0}
 .ramabar .rb{border:1.5px solid var(--borde);background:#fff;color:#155c34;padding:8px 20px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.95rem}
 .ramabar .rb.act{background:linear-gradient(90deg,#1f8a4c,#2fa860);color:#fff;border-color:#1f8a4c;box-shadow:0 3px 10px rgba(31,138,76,.25)}
+html,body{overflow-x:hidden;max-width:100%}
+details.acc{cursor:pointer}
+details.acc>summary{list-style:none;display:flex;align-items:center;gap:10px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary .sec{margin:0}
+details.acc>summary::after{content:'▾';color:#1f8a4c;font-weight:700;font-size:1.1rem;margin-left:auto}
+details.acc[open]>summary::after{content:'▴'}
+details.acc .accbody{margin-top:14px}
+@media(max-width:600px){
+  .card{padding:16px}
+  details.acc.card{padding:14px 16px}
+  table{font-size:.8rem}
+  th,td{padding:7px 4px}
+  h2.sec,details.acc>summary .sec{font-size:1rem}
+}
 </style>
 </head>
 <body>
@@ -512,8 +527,8 @@ async function renderPosiciones(){
 
   c.disciplinas.forEach(d=>{
     const podio = c.podios.filter(p=>p.disciplina_id===dk(d.id)).sort((a,b)=>a.puesto-b.puesto);
-    html+=`<div class="card"><div class="flex-between"><h2 class="sec">${ico(d.id)} ${esc(d.nombre)}</h2>
-      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${d.tipo==='equipo'?'Liga por equipos':'Individual'}</span></div>`;
+    html+=`<details class="card acc"><summary><span class="sec">${ico(d.id)} ${esc(d.nombre)}</span>
+      <span class="tag ${d.tipo==='equipo'?'eq':'ind'}">${d.tipo==='equipo'?'Liga por equipos':'Individual'}</span></summary><div class="accbody">`;
     if(d.tipo==='equipo'){
       const equipos=c.inscripciones.filter(x=>x.disciplina_id===d.id && x.tipo==='equipo' && x.rama===RAMA);
       const eqids=new Set(equipos.map(e=>e.id));
@@ -538,7 +553,7 @@ async function renderPosiciones(){
       podio.forEach(p=>html+=`<span class="chip">${medalIco(p.puesto)} <b>${esc(c.cursoNombre(p.curso_id))}</b></span>`);
       html+=`</div>`;
     } else if(d.tipo==='individual'){ html+=`<div class="empty">Podio aún no definido.</div>`; }
-    html+=`</div>`;
+    html+=`</div></details>`;
   });
   cont.innerHTML=html; bindRama();
 }
@@ -557,11 +572,11 @@ async function renderCalendario(){
       if(!parts.length) return;
       any=true;
       const emo=rama==='Masculino'?'♂':'♀';
-      html+=`<div class="card"><h3 class="sec" style="margin:0 0 6px">${ico(d.id)} ${esc(d.nombre)} — ${rama} ${emo}</h3>`;
+      html+=`<details class="card acc"><summary><span class="sec" style="margin:0">${ico(d.id)} ${esc(d.nombre)} — ${rama} ${emo}</span></summary><div class="accbody">`;
       const gp=parts.filter(pp=>pp.fase==='grupo');
       if(gp.length){ html+=`<h4 style="margin:8px 0 4px">Fase de grupos</h4><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Resultado</th></tr></thead><tbody>`; gp.forEach(pp=>html+=filaCal(pp,equipos)); html+=`</tbody></table>`; }
       ['cuartos','semi','final','tercer'].forEach(f=>{ const ms=parts.filter(pp=>pp.fase===f); if(!ms.length)return; html+=`<h4 style="margin:10px 0 4px">${FASE_NOM[f]}</h4><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Resultado</th></tr></thead><tbody>`; ms.forEach(pp=>html+=filaCal(pp,equipos)); html+=`</tbody></table>`; });
-      html+=`</div>`;
+      html+=`</div></details>`;
     });
   });
   if(!any) html+=`<div class="card"><div class="empty">Aún no hay partidos programados. El organizador debe realizar el sorteo en Administración.</div></div>`;
