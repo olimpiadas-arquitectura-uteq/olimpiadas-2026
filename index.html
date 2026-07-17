@@ -319,6 +319,7 @@ const DB = {
   async inscripciones(){ if(MODE==='sheets') return (await sheetsEnsure()).inscripciones||[]; if(MODE==='supabase') return (await sb.from('inscripciones').select('*').order('fecha')).data||[]; return LS.get('inscripciones',[]); },
   async addInscripcion(r){ if(MODE==='sheets'){ await sheetsWrite({action:'insert',table:'inscripciones',row:{...r,id:uid(),fecha:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('inscripciones').insert(r); } else { const a=LS.get('inscripciones',[]); a.push({...r,id:uid(),fecha:new Date().toISOString()}); LS.set('inscripciones',a); } },
   async delInscripcion(id){ if(MODE==='sheets'){ await sheetsWrite({action:'delete',table:'inscripciones',id}); } else if(MODE==='supabase'){ await sb.from('inscripciones').delete().eq('id',id); } else { LS.set('inscripciones', LS.get('inscripciones',[]).filter(x=>x.id!==id)); } },
+  async updateInscripcion(id,campos){ if(MODE==='sheets'){ await sheetsWrite({action:'update',table:'inscripciones',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('inscripciones').update(campos).eq('id',id); } else { const a=LS.get('inscripciones',[]); const i=a.findIndex(x=>x.id===id); if(i>=0){ a[i]={...a[i],...campos}; LS.set('inscripciones',a); } } },
   async partidos(){ if(MODE==='sheets') return (await sheetsEnsure()).partidos||[]; if(MODE==='supabase') return (await sb.from('partidos').select('*').order('creado')).data||[]; return LS.get('partidos',[]); },
   async addPartido(p){ if(MODE==='sheets'){ await sheetsWrite({action:'insert',table:'partidos',row:{...p,id:uid(),creado:new Date().toISOString()}}); } else if(MODE==='supabase'){ await sb.from('partidos').insert(p); } else { const a=LS.get('partidos',[]); a.push({...p,id:uid()}); LS.set('partidos',a); } },
   async updatePartido(id,campos){ if(MODE==='sheets'){ await sheetsWrite({action:'update',table:'partidos',id,changes:campos}); } else if(MODE==='supabase'){ await sb.from('partidos').update(campos).eq('id',id); } else { const a=LS.get('partidos',[]); const i=a.findIndex(x=>x.id===id); a[i]={...a[i],...campos}; LS.set('partidos',a); } },
@@ -671,6 +672,22 @@ $('#pinBtn').onclick=()=>{
 };
 $('#pinInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pinBtn').click(); });
 
+function gestionInscritosHTML(d, insc, c){
+  let s=`<details class="card acc" open><summary><span class="sec">✎ Inscritos — corregir o eliminar (${insc.length})</span></summary><div class="accbody">
+    <p class="mini" style="margin-top:0">Solo tu disciplina y la rama activa. “Editar” te deja corregir nombre, paralelo y rama.</p>`;
+  if(!insc.length){ s+=`<div class="empty">Sin inscritos en esta rama.</div>`; }
+  insc.forEach(x=>{
+    const quien = d.tipo==='equipo'
+      ? `<b>${esc(x.nombre_equipo)}</b> · ${esc(c.cursoNombre(x.curso_id))}`
+      : `<b>${esc(x.participante)}</b> · ${esc(c.cursoNombre(x.curso_id))}${x.cedula_part?' · '+esc(x.cedula_part):''}`;
+    s+=`<div style="border-bottom:1px solid #eef1f6;padding:8px 0">
+      <div class="flex-between"><span style="font-size:.9rem">${quien}</span>
+        <span style="white-space:nowrap"><button class="btn ghost sm" data-edit-ins="${x.id}">✎ Editar</button> <button class="btn rojo sm" data-del-ins="${x.id}">Eliminar</button></span></div>
+      <div id="insedit-${x.id}" style="display:none;margin-top:8px"></div></div>`;
+  });
+  s+=`</div></details>`;
+  return s;
+}
 function vistaDisciplina(c, did){
   const d=c.disciplinas.find(x=>x.id===did);
   if(!d) return `<div class="card"><p>Disciplina no encontrada.</p></div>`;
@@ -680,6 +697,8 @@ function vistaDisciplina(c, did){
   const t=c.torneos[dk(did)];
   let h=`<div class="card"><div class="flex-between"><h2 class="sec">${ico(did)} ${esc(d.nombre)}</h2><span class="pill">Responsable de disciplina</span></div>
     <p class="sub">Registra aquí los resultados de tu disciplina (quién ganó o perdió). Los sorteos los realiza el organizador.</p>${ramaBar()}`;
+  const misInsc=c.inscripciones.filter(x=>x.disciplina_id===did&&x.rama===RAMA);
+  const inscHTML=gestionInscritosHTML(d, misInsc, c);
   if(d.tipo==='individual'){
     const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
     const get=pu=>(c.podios.find(p=>p.disciplina_id===dk(did)&&p.puesto===pu)||{}).curso_id||'';
@@ -689,9 +708,9 @@ function vistaDisciplina(c, did){
       <div><label>🥉 Bronce</label><select class="pod" data-d="${did}" data-pu="3">${cursoOpts}</select></div>
     </div></div>`;
     setTimeout(()=>{ [1,2,3].forEach(pu=>{ const s=document.querySelector('.pod[data-d="'+did+'"][data-pu="'+pu+'"]'); if(s) s.value=get(pu); }); },0);
-    return h;
+    return h + inscHTML;
   }
-  if(!t||!t.grupos){ h+=`<div class="empty">El organizador aún no ha realizado el sorteo de tu disciplina.</div></div>`; return h; }
+  if(!t||!t.grupos){ h+=`<div class="empty">El organizador aún no ha realizado el sorteo de tu disciplina.</div></div>`; return h + inscHTML; }
   h+=`<h3>Grupos</h3>`+tablaGruposHTML(equipos,parts,t);
   const gp=parts.filter(p=>p.fase==='grupo');
   if(gp.length){ h+=`<h3>Calendario — registra marcadores</h3><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Marcador</th><th></th></tr></thead><tbody>`; gp.forEach(p=>h+=filaPartidoEdit(p,equipos)); h+=`</tbody></table>`; }
@@ -699,7 +718,7 @@ function vistaDisciplina(c, did){
   h+=`<div style="margin-top:10px">${ko.length?`<button class="btn ghost sm" data-avanzar="${did}">⏭ Avanzar ganadores</button> <button class="btn sm" data-podio-bracket="${did}">🏅 Enviar podio al medallero</button>`:`<span class="mini">Cuando termines la fase de grupos, el organizador generará las eliminatorias.</span>`}</div>`;
   h+=bracketAdminHTML(ko,equipos);
   h+=`</div>`;
-  return h;
+  return h + inscHTML;
 }
 
 async function renderAdmin(){
@@ -804,6 +823,36 @@ function bindAdmin(c){
       if(quedan===0 && !enPodio) await DB.delCurso(ins.curso_id);
     }
     renderAdmin();
+  });
+  document.querySelectorAll('[data-edit-ins]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.editIns; const x=c.inscripciones.find(i=>i.id===id); if(!x) return;
+    const box=document.getElementById('insedit-'+id); if(!box) return;
+    if(box.style.display==='block'){ box.style.display='none'; box.innerHTML=''; return; }
+    const equipo = x.tipo==='equipo';
+    const nom = equipo ? (x.nombre_equipo||'') : (x.participante||'');
+    const cursoNom = c.cursoNombre(x.curso_id)||'';
+    box.style.display='block';
+    box.innerHTML = `<div class="row">
+        <div style="flex:2"><label>${equipo?'Nombre del equipo':'Nombre del participante'}</label><input class="ei-nom" value="${esc(nom)}"></div>
+        ${equipo?'':`<div><label>Cédula</label><input class="ei-ced" value="${esc(x.cedula_part||'')}"></div>`}
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label>Paralelo / Curso</label><input class="ei-cur" value="${esc(cursoNom)}"></div>
+        <div><label>Rama</label><select class="ei-rama"><option${x.rama==='Masculino'?' selected':''}>Masculino</option><option${x.rama==='Femenino'?' selected':''}>Femenino</option></select></div>
+      </div>
+      <div style="margin-top:10px"><button class="btn sm" data-savein="${id}">Guardar cambios</button> <button class="btn gris sm" data-cancelin="${id}">Cancelar</button></div>`;
+    box.querySelector('[data-savein]').onclick=async()=>{
+      const nom2=box.querySelector('.ei-nom').value.trim();
+      const cur=box.querySelector('.ei-cur').value.trim();
+      const rama=box.querySelector('.ei-rama').value;
+      if(!nom2||!cur){ alert('Completa el nombre y el paralelo.'); return; }
+      const cursoId=await DB.getOrCreateCurso(cur);
+      const campos={ curso_id:cursoId, rama };
+      if(equipo){ campos.nombre_equipo=nom2; } else { campos.participante=nom2; const ced=box.querySelector('.ei-ced'); campos.cedula_part= ced?ced.value.trim():''; }
+      await DB.updateInscripcion(id,campos);
+      renderAdmin();
+    };
+    box.querySelector('[data-cancelin]').onclick=()=>{ box.style.display='none'; box.innerHTML=''; };
   });
   document.querySelectorAll('[data-add-partido]').forEach(b=>b.onclick=async()=>{
     const det=b.closest('details'); const L=det.querySelector('.pLocal').value, V=det.querySelector('.pVisit').value;
