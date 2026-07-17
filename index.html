@@ -163,7 +163,7 @@ details.acc .accbody{margin-top:14px}
       <div class="row">
         <div><label>Nivel <span class="req">*</span></label>
           <select name="nivel" id="selNivel"><option value="">Selecciona…</option><option>Primero</option><option>Segundo</option><option>Tercero</option><option>Cuarto</option><option>Quinto</option><option>Sexto</option><option>Séptimo</option><option>Octavo</option></select></div>
-        <div><label>Paralelo</label><input name="paralelo" placeholder="Ej: A (o A-B si es combinado)"><small style="display:block;color:#6b7280;font-size:.78rem;margin-top:4px;line-height:1.3">Si el equipo lo forman <b>varios paralelos</b>, sepáralos con un guion. Ejemplo: <b>A-B</b></small></div>
+        <div><label>Paralelo <span class="req">*</span></label><input name="paralelo" placeholder="Ej: A (o A-B si es combinado)"><small style="display:block;color:#6b7280;font-size:.78rem;margin-top:4px;line-height:1.3">Si el equipo lo forman <b>varios paralelos</b>, sepáralos con un guion. Ejemplo: <b>A-B</b></small></div>
       </div>
 
       <h3>Disciplina</h3>
@@ -283,6 +283,7 @@ async function refreshData(){ try{ const d=await sheetsFetch({}); _data=d; saveS
 function setConn(ok){ _connOk=ok; const b=document.getElementById('modoBadge'); if(!b||MODE==='local') return; b.innerHTML='<span class="dot '+(ok?'on':'off')+'"></span>'+(ok?'Conectado a la base de datos':'Sin conexión — mostrando datos guardados'); }
 let RAMA='Masculino';
 let INS_RAMA='Todos';
+const NOTA_GEN='<div class="banner" style="background:#fff6e6;border:1.5px solid #f0d9a8;color:#8a6d1f;border-radius:12px;padding:12px 14px;margin-top:8px">Elige <b>Masculino</b> o <b>Femenino</b> arriba para gestionar sorteos, resultados y podios.</div>';
 function insFiltroBar(){ const b=(v,t)=>`<button class="rb${INS_RAMA===v?' act':''}" data-insrama="${v}">${t}</button>`; return `<div class="ramabar" style="margin:0 0 12px">${b('Masculino','\u2642 Masculino')}${b('Femenino','\u2640 Femenino')}${b('Todos','Todos')}</div>`; }
 function dk(did){ return did+'__'+RAMA; }
 function baseDisc(k){ return String(k).split('__')[0]; }
@@ -654,6 +655,7 @@ $('#form').addEventListener('submit',async e=>{
   if(!selDisc){ insMsg('Selecciona una disciplina.','err'); return; }
   const nivel=f.nivel.value, paralelo=(f.paralelo.value||'').trim();
   if(!nivel){ insMsg('Selecciona el nivel.','err'); return; }
+  if(!paralelo){ insMsg('Ingresa el paralelo.','err'); return; }
   const reqContacto = selDisc.tipo==='equipo' ? ['resp_nombre','resp_tel','resp_email'] : ['resp_tel','resp_email'];
   for(const n of reqContacto) if(!f[n].value.trim()){ insMsg('Completa los datos de contacto.','err'); return; }
   const cursoNombre=`${NIVEL_ABBR[nivel]}${paralelo?' '+paralelo.toUpperCase():''}`;
@@ -704,9 +706,10 @@ $('#pinBtn').onclick=()=>{
 };
 $('#pinInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pinBtn').click(); });
 
+function detalleInsc(x){ let s=''; const r=x.responsable||{}; if(r.nombre||r.tel||r.email) s+=`<div class="mini" style="margin-top:3px">Responsable: ${esc(r.nombre||'—')}${r.tel?' · '+esc(r.tel):''}${r.email?' · '+esc(r.email):''}</div>`; const jug=x.jugadores||[]; if(jug.length){ s+=`<div class="mini" style="margin-top:3px"><b>Integrantes:</b></div><ol class="mini" style="margin:2px 0 0 20px;padding:0">`; jug.forEach(j=>{ s+=`<li>${esc(j.nombre||'')}${j.cedula?' · C.I. '+esc(j.cedula):''}</li>`; }); s+=`</ol>`; } return s; }
 function gestionInscritosHTML(d, insc, c){
   let s=`<details class="card acc" open><summary><span class="sec">✎ Inscritos — corregir o eliminar (${insc.length})</span></summary><div class="accbody">
-    <p class="mini" style="margin-top:0">Filtra por género. “Editar” te deja corregir nombre, paralelo y rama.</p>${insFiltroBar()}`;
+    <p class="mini" style="margin-top:0">Filtra por género. “Editar” te deja corregir nombre, paralelo y rama.</p>`;
   if(!insc.length){ s+=`<div class="empty">Sin inscritos${INS_RAMA==='Todos'?'':' en la rama '+INS_RAMA}.</div>`; }
   insc.forEach(x=>{
     const quien = d.tipo==='equipo'
@@ -715,6 +718,7 @@ function gestionInscritosHTML(d, insc, c){
     s+=`<div style="border-bottom:1px solid #eef1f6;padding:8px 0">
       <div class="flex-between"><span style="font-size:.9rem">${quien}</span>
         <span style="white-space:nowrap"><button class="btn ghost sm" data-edit-ins="${x.id}">✎ Editar</button> <button class="btn rojo sm" data-del-ins="${x.id}">Eliminar</button></span></div>
+      ${detalleInsc(x)}
       <div id="insedit-${x.id}" style="display:none;margin-top:8px"></div></div>`;
   });
   s+=`</div></details>`;
@@ -728,10 +732,11 @@ function vistaDisciplina(c, did){
   const parts=c.partidos.filter(p=>p.disciplina_id===did&&eqids.has(p.local_id)).sort((a,b)=>a.orden-b.orden);
   const t=c.torneos[dk(did)];
   let h=`<div class="card"><div class="flex-between"><h2 class="sec">${ico(did)} ${esc(d.nombre)}</h2><span class="pill">Responsable de disciplina</span></div>
-    <p class="sub">Registra aquí los resultados de tu disciplina (quién ganó o perdió). Los sorteos los realiza el organizador.</p>${ramaBar()}`;
+    <p class="sub">Registra aquí los resultados de tu disciplina (quién ganó o perdió). Los sorteos los realiza el organizador.</p>${insFiltroBar()}`;
   const misInsc=c.inscripciones.filter(x=>x.disciplina_id===did && (INS_RAMA==='Todos'||x.rama===INS_RAMA));
   const inscHTML=gestionInscritosHTML(d, misInsc, c);
   if(d.tipo==='individual'){
+    if(INS_RAMA==='Todos'){ h+=NOTA_GEN+`</div>`; return h + inscHTML; }
     const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
     h+=`<h3>Define los ganadores (podio) \u2014 rama ${RAMA}</h3>`;
     if(tienePruebas(did)){ h+=`<p class="mini" style="margin-top:0">Cada prueba tiene su propio podio.</p>`; PRUEBAS[did].forEach(pr=> h+=podioBloque(d,cursoOpts,pr)); }
@@ -739,6 +744,7 @@ function vistaDisciplina(c, did){
     h+=`</div>`;
     return h + inscHTML;
   }
+  if(INS_RAMA==='Todos'){ h+=NOTA_GEN+`</div>`; return h + inscHTML; }
   if(!t||!t.grupos){ h+=`<div class="empty">El organizador aún no ha realizado el sorteo de tu disciplina.</div></div>`; return h + inscHTML; }
   h+=`<h3>Grupos</h3>`+tablaGruposHTML(equipos,parts,t);
   const gp=parts.filter(p=>p.fase==='grupo');
@@ -753,9 +759,10 @@ function vistaDisciplina(c, did){
 async function renderAdmin(){
   const c=await ctx();
   const panel=$('#adminPanel');
+  if(INS_RAMA!=='Todos') RAMA=INS_RAMA;
   if(ROL==='disciplina'){ panel.innerHTML=vistaDisciplina(c,DISC_ADMIN); bindAdmin(c); return; }
   let h='';
-  h+=`<div class="card" style="padding:12px 16px 4px"><b>Rama activa para sorteos y podios: ${RAMA}</b>${ramaBar()}</div>`;
+  h+=`<div class="card" style="padding:12px 16px 6px"><b>Vista por género</b>${insFiltroBar()}</div>`;
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" /></svg> Paralelos / Cursos</h2>
     <p class="sub">Se crean solos al inscribirse (Carrera + Nivel + Paralelo). Aquí puedes renombrarlos o eliminarlos.</p>
     <div class="row"><div style="flex:3"><input id="nuevoCurso" placeholder="Ej: 5to A"></div>
@@ -765,7 +772,6 @@ async function renderAdmin(){
   h+=`</div></div>`;
 
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M12 3C12.55 3 13 3.45 13 4S12.55 5 12 5 11 4.55 11 4 11.45 3 12 3M7 7H17V5H19V19H5V5H7V7M12 17V15H17V17H12M12 11V9H17V11H12M8 12V9H7V8H9V12H8M9.25 14C9.66 14 10 14.34 10 14.75C10 14.95 9.92 15.14 9.79 15.27L8.12 17H10V18H7V17.08L9 15H7V14H9.25" /></svg> Inscripciones</h2>`;
-  h+=insFiltroBar();
   { const _ins=c.inscripciones.filter(x=>INS_RAMA==='Todos'||x.rama===INS_RAMA);
   if(!_ins.length) h+=`<div class="empty">Sin inscripciones${INS_RAMA==='Todos'?'':' en la rama '+INS_RAMA}.</div>`;
   else{
@@ -777,7 +783,7 @@ async function renderAdmin(){
         const quien=d.tipo==='equipo'?`<b>${esc(x.nombre_equipo)}</b> · ${esc(c.cursoNombre(x.curso_id))} · ${esc(x.rama)} · ${(x.jugadores||[]).length} jug.`
           :`<b>${esc(x.participante)}</b> · ${esc(c.cursoNombre(x.curso_id))} · ${esc(x.rama)}${x.categoria?' · '+esc(x.categoria):''}`;
         h+=`<div class="flex-between" style="border-bottom:1px solid #eef1f6;padding:8px 0">
-          <span style="font-size:.86rem">${quien}<br><span class="mini">Contacto: ${esc((x.responsable||{}).nombre||'')} ${esc((x.responsable||{}).tel||'')}</span></span>
+          <span style="font-size:.86rem">${quien}${detalleInsc(x)}</span>
           <button class="btn rojo sm" data-del-ins="${x.id}">Eliminar</button></div>`;
       });
       h+=`</div></details>`;
@@ -787,7 +793,7 @@ async function renderAdmin(){
 
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21 3H3C1.9 3 1 3.9 1 5V19C1 20.1 1.9 21 3 21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3M21 19H3V5H21M5 7H9C9.6 7 10 7.4 10 8V16C10 16.6 9.6 17 9 17H5C4.4 17 4 16.6 4 16V8C4 7.4 4.4 7 5 7M6 9V15H8V9M15 7H19C19.6 7 20 7.4 20 8V16C20 16.6 19.6 17 19 17H15C14.4 17 14 16.6 14 16V8C14 7.4 14.4 7 15 7M16 9V15H18V9M12 11C12.6 11 13 10.6 13 10C13 9.4 12.6 9 12 9C11.4 9 11 9.4 11 10C11 10.6 11.4 11 12 11M12 15C12.6 15 13 14.6 13 14C13 13.4 12.6 13 12 13C11.4 13 11 13.4 11 14C11 14.6 11.4 15 12 15Z" /></svg> Sorteo, grupos y calendario</h2><p class="sub">Sortea los grupos, reparte el calendario en tus horarios y arma las eliminatorias. Puedes <b>rehacer el sorteo cuando quieras</b>: solo se regeneran los partidos, <b>nunca se borran las inscripciones</b>.</p>`;
   const discEquipo=c.disciplinas.filter(d=>d.tipo==='equipo');
-  discEquipo.forEach(d=>{
+  if(INS_RAMA==='Todos'){ h+=NOTA_GEN; } else discEquipo.forEach(d=>{
     const equipos=c.inscripciones.filter(x=>x.disciplina_id===d.id&&x.tipo==='equipo'&&x.rama===RAMA);
     const eqids=new Set(equipos.map(e=>e.id));
     const parts=c.partidos.filter(p=>p.disciplina_id===d.id&&eqids.has(p.local_id)).sort((a,b)=>a.orden-b.orden);
@@ -823,7 +829,7 @@ async function renderAdmin(){
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M20,2H4V4L9.81,8.36C6.14,9.57 4.14,13.53 5.35,17.2C6.56,20.87 10.5,22.87 14.19,21.66C17.86,20.45 19.86,16.5 18.65,12.82C17.95,10.71 16.3,9.05 14.19,8.36L20,4V2M14.94,19.5L12,17.78L9.06,19.5L9.84,16.17L7.25,13.93L10.66,13.64L12,10.5L13.34,13.64L16.75,13.93L14.16,16.17L14.94,19.5Z" /></svg> Podios (medallero)</h2>
     <p class="sub">Define Oro/Plata/Bronce por disciplina. Para ligas puedes autocompletar desde la tabla.</p>`;
   const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
-  c.disciplinas.forEach(d=>{
+  if(INS_RAMA==='Todos'){ h+=NOTA_GEN; } else c.disciplinas.forEach(d=>{
     h+=`<details><summary>${ico(d.id)} ${esc(d.nombre)} (${RAMA})</summary><div style="padding-bottom:12px">`;
     if(d.tipo!=='equipo' && tienePruebas(d.id)){
       h+=`<p class="mini" style="margin-top:0">Cada prueba tiene su propio podio.</p>`;
