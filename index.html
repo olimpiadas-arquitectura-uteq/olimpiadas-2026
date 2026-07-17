@@ -276,14 +276,14 @@ function setRama(r){ if(r===RAMA) return; RAMA=r;
 function reRenderActive(){ try{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); if(!document.getElementById('tab-calendario').classList.contains('hidden')) renderCalendario(); }catch(e){} }
 
 const DISCIPLINAS_DEMO = [
-  {id:'futbol',nombre:'Fútbol',tipo:'equipo',min_jug:7,max_jug:15,puntos_1:10,puntos_2:7,puntos_3:5,orden:1},
-  {id:'basquet',nombre:'Básquet',tipo:'equipo',min_jug:5,max_jug:10,puntos_1:10,puntos_2:7,puntos_3:5,orden:2},
-  {id:'voleibol',nombre:'Voleibol',tipo:'equipo',min_jug:6,max_jug:12,puntos_1:10,puntos_2:7,puntos_3:5,orden:3},
-  {id:'atletismo',nombre:'Atletismo',tipo:'individual',min_jug:0,max_jug:0,puntos_1:10,puntos_2:7,puntos_3:5,orden:4},
-  {id:'natacion',nombre:'Natación',tipo:'individual',min_jug:0,max_jug:0,puntos_1:10,puntos_2:7,puntos_3:5,orden:5},
-  {id:'ajedrez',nombre:'Ajedrez',tipo:'individual',min_jug:0,max_jug:0,puntos_1:10,puntos_2:7,puntos_3:5,orden:6},
-  {id:'tenmesa',nombre:'Tenis de mesa',tipo:'individual',min_jug:0,max_jug:0,puntos_1:10,puntos_2:7,puntos_3:5,orden:7},
-  {id:'tencampo',nombre:'Tenis de campo',tipo:'individual',min_jug:0,max_jug:0,puntos_1:10,puntos_2:7,puntos_3:5,orden:8},
+  {id:'futbol',nombre:'Fútbol',tipo:'equipo',min_jug:7,max_jug:15,puntos_1:20,puntos_2:14,puntos_3:10,orden:1},
+  {id:'basquet',nombre:'Básquet',tipo:'equipo',min_jug:5,max_jug:10,puntos_1:12,puntos_2:8,puntos_3:6,orden:2},
+  {id:'voleibol',nombre:'Voleibol',tipo:'equipo',min_jug:6,max_jug:12,puntos_1:12,puntos_2:8,puntos_3:6,orden:3},
+  {id:'atletismo',nombre:'Atletismo',tipo:'individual',min_jug:0,max_jug:0,puntos_1:6,puntos_2:4,puntos_3:3,orden:4},
+  {id:'natacion',nombre:'Natación',tipo:'individual',min_jug:0,max_jug:0,puntos_1:6,puntos_2:4,puntos_3:3,orden:5},
+  {id:'ajedrez',nombre:'Ajedrez',tipo:'individual',min_jug:0,max_jug:0,puntos_1:6,puntos_2:4,puntos_3:3,orden:6},
+  {id:'tenmesa',nombre:'Tenis de mesa',tipo:'individual',min_jug:0,max_jug:0,puntos_1:6,puntos_2:4,puntos_3:3,orden:7},
+  {id:'tencampo',nombre:'Tenis de campo',tipo:'individual',min_jug:0,max_jug:0,puntos_1:6,puntos_2:4,puntos_3:3,orden:8},
 ];
 
 const LS = {
@@ -703,7 +703,7 @@ async function renderAdmin(){
   }
   h+=`</div>`;
 
-  h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21 3H3C1.9 3 1 3.9 1 5V19C1 20.1 1.9 21 3 21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3M21 19H3V5H21M5 7H9C9.6 7 10 7.4 10 8V16C10 16.6 9.6 17 9 17H5C4.4 17 4 16.6 4 16V8C4 7.4 4.4 7 5 7M6 9V15H8V9M15 7H19C19.6 7 20 7.4 20 8V16C20 16.6 19.6 17 19 17H15C14.4 17 14 16.6 14 16V8C14 7.4 14.4 7 15 7M16 9V15H18V9M12 11C12.6 11 13 10.6 13 10C13 9.4 12.6 9 12 9C11.4 9 11 9.4 11 10C11 10.6 11.4 11 12 11M12 15C12.6 15 13 14.6 13 14C13 13.4 12.6 13 12 13C11.4 13 11 13.4 11 14C11 14.6 11.4 15 12 15Z" /></svg> Sorteo, grupos y calendario</h2><p class="sub">Sortea los grupos, reparte el calendario en tus horarios y arma las eliminatorias.</p>`;
+  h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21 3H3C1.9 3 1 3.9 1 5V19C1 20.1 1.9 21 3 21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3M21 19H3V5H21M5 7H9C9.6 7 10 7.4 10 8V16C10 16.6 9.6 17 9 17H5C4.4 17 4 16.6 4 16V8C4 7.4 4.4 7 5 7M6 9V15H8V9M15 7H19C19.6 7 20 7.4 20 8V16C20 16.6 19.6 17 19 17H15C14.4 17 14 16.6 14 16V8C14 7.4 14.4 7 15 7M16 9V15H18V9M12 11C12.6 11 13 10.6 13 10C13 9.4 12.6 9 12 9C11.4 9 11 9.4 11 10C11 10.6 11.4 11 12 11M12 15C12.6 15 13 14.6 13 14C13 13.4 12.6 13 12 13C11.4 13 11 13.4 11 14C11 14.6 11.4 15 12 15Z" /></svg> Sorteo, grupos y calendario</h2><p class="sub">Sortea los grupos, reparte el calendario en tus horarios y arma las eliminatorias. Puedes <b>rehacer el sorteo cuando quieras</b>: solo se regeneran los partidos, <b>nunca se borran las inscripciones</b>.</p>`;
   const discEquipo=c.disciplinas.filter(d=>d.tipo==='equipo');
   discEquipo.forEach(d=>{
     const equipos=c.inscripciones.filter(x=>x.disciplina_id===d.id&&x.tipo==='equipo'&&x.rama===RAMA);
