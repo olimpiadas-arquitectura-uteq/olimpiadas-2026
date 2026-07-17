@@ -706,7 +706,7 @@ $('#pinBtn').onclick=()=>{
 };
 $('#pinInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pinBtn').click(); });
 
-function detalleInsc(x){ let s=''; const r=x.responsable||{}; if(r.nombre||r.tel||r.email) s+=`<div class="mini" style="margin-top:3px">Responsable: ${esc(r.nombre||'—')}${r.tel?' · '+esc(r.tel):''}${r.email?' · '+esc(r.email):''}</div>`; const jug=x.jugadores||[]; if(jug.length){ s+=`<div class="mini" style="margin-top:3px"><b>Integrantes:</b></div><ol class="mini" style="margin:2px 0 0 20px;padding:0">`; jug.forEach(j=>{ s+=`<li>${esc(j.nombre||'')}${j.cedula?' · C.I. '+esc(j.cedula):''}</li>`; }); s+=`</ol>`; } return s; }
+function detalleInsc(x){ let s=''; const r=x.responsable||{}; if(r.nombre||r.tel||r.email) s+=`<div class="mini" style="margin-top:3px">Responsable: ${esc(r.nombre||'—')}${r.tel?' · '+esc(r.tel):''}${r.email?' · '+esc(r.email):''}</div>`; const jug=x.jugadores||[]; if(jug.length){ s+=`<details style="margin-top:4px"><summary class="mini" style="cursor:pointer;color:#155c34;font-weight:700;list-style:revert">Ver integrantes (${jug.length})</summary><ol class="mini" style="margin:4px 0 0 20px;padding:0">`; jug.forEach(j=>{ s+=`<li>${esc(j.nombre||'')}${j.cedula?' · C.I. '+esc(j.cedula):''}</li>`; }); s+=`</ol></details>`; } return s; }
 function gestionInscritosHTML(d, insc, c){
   let s=`<details class="card acc" open><summary><span class="sec">✎ Inscritos — corregir o eliminar (${insc.length})</span></summary><div class="accbody">
     <p class="mini" style="margin-top:0">Filtra por género. “Editar” te deja corregir nombre, paralelo y rama.</p>`;
