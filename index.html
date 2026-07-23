@@ -477,6 +477,17 @@ async function podioDesdeBracket(did){
   if(ter&&ter.jugado) await DB.setPodio(dk(did),3,curso(ganador(ter)));
   alert('Podio enviado al medallero.');renderAdmin();
 }
+async function autoPodioBracket(did){
+  const eqs=(await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA);
+  const eqset=new Set(eqs.map(e=>e.id));
+  const parts=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)&&p.fase!=='grupo');
+  const fin=parts.find(p=>p.fase==='final'); const ter=parts.find(p=>p.fase==='tercer');
+  if(!fin||!fin.jugado||(+fin.gl===+fin.gv)) return;
+  const curso=id=>(eqs.find(e=>e.id===id)||{}).curso_id;
+  await DB.setPodio(dk(did),1,curso(ganador(fin)));
+  await DB.setPodio(dk(did),2,curso(perdedor(fin)));
+  if(ter&&ter.jugado&&(+ter.gl!==+ter.gv)) await DB.setPodio(dk(did),3,curso(ganador(ter)));
+}
 
 function filaPartidoEdit(p,equipos){
   return `<tr><td class="mini left">${esc(p.fecha||'—')}</td>
@@ -745,8 +756,7 @@ function vistaDisciplina(c, did){
   const t=c.torneos[dk(did)];
   let h=`<div class="card"><div class="flex-between"><h2 class="sec">${ico(did)} ${esc(d.nombre)}</h2><span class="pill">Responsable de disciplina</span></div>
     <p class="sub">Registra aquí los resultados de tu disciplina (quién ganó o perdió). Los sorteos los realiza el organizador.</p>${insFiltroBar()}`;
-  const misInsc=c.inscripciones.filter(x=>x.disciplina_id===did && (INS_RAMA==='Todos'||x.rama===INS_RAMA));
-  const inscHTML=gestionInscritosHTML(d, misInsc, c);
+  const inscHTML='';
   if(d.tipo==='individual'){
     if(INS_RAMA==='Todos'){ h+=NOTA_GEN+`</div>`; return h + inscHTML; }
     const cursoOpts=`<option value="">—</option>`+c.cursos.map(cu=>`<option value="${cu.id}">${esc(cu.nombre)}</option>`).join('');
@@ -762,7 +772,7 @@ function vistaDisciplina(c, did){
   const gp=parts.filter(p=>p.fase==='grupo');
   if(gp.length){ h+=`<h3>Calendario — registra marcadores</h3><table><thead><tr><th class="left">Horario</th><th class="left">Partido</th><th>Marcador</th><th></th></tr></thead><tbody>`; gp.forEach(p=>h+=filaPartidoEdit(p,equipos)); h+=`</tbody></table>`; }
   const ko=parts.filter(p=>p.fase!=='grupo');
-  h+=`<div style="margin-top:10px">${ko.length?`<button class="btn ghost sm" data-avanzar="${did}">⏭ Avanzar ganadores</button> <button class="btn sm" data-podio-bracket="${did}">🏅 Enviar podio al medallero</button>`:`<span class="mini">Cuando termines la fase de grupos, el organizador generará las eliminatorias.</span>`}</div>`;
+  h+=`<div style="margin-top:10px">${ko.length?`<button class="btn ghost sm" data-avanzar="${did}">⏭ Avanzar ganadores</button> <span class="mini" style="margin-left:6px">🏅 Las medallas se asignan automáticamente al registrar la final.</span>`:`<span class="mini">Cuando termines la fase de grupos, el organizador generará las eliminatorias.</span>`}</div>`;
   h+=bracketAdminHTML(ko,equipos);
   h+=`</div>`;
   return h + inscHTML;
@@ -1021,7 +1031,10 @@ function bindAdmin(c){
     const id=b.dataset.savePartido;
     const gl=document.querySelector(`.mkL[data-p="${id}"]`).value, gv=document.querySelector(`.mkV[data-p="${id}"]`).value;
     if(gl===''||gv===''){ alert('Ingresa ambos marcadores.'); return; }
-    await DB.updatePartido(id,{gl:+gl,gv:+gv,jugado:true}); renderAdmin();
+    const _p=c.partidos.find(x=>x.id===id);
+    await DB.updatePartido(id,{gl:+gl,gv:+gv,jugado:true});
+    if(_p) await autoPodioBracket(_p.disciplina_id);
+    renderAdmin();
   });
   document.querySelectorAll('[data-del-partido]').forEach(b=>b.onclick=async()=>{ await DB.delPartido(b.dataset.delPartido); renderAdmin(); });
   document.querySelectorAll('.pod').forEach(s=>s.onchange=async()=>{ const key=s.dataset.prueba?dk3(s.dataset.d,s.dataset.prueba):dk(s.dataset.d); await DB.setPodio(key,+s.dataset.pu,s.value||null); });
