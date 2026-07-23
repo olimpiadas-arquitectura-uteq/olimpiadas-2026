@@ -224,6 +224,7 @@ details.acc .accbody{margin-top:14px}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* ===== CONFIGURACIÓN (edita solo esto) ===== */
 const CONFIG = {
@@ -758,6 +759,37 @@ function vistaDisciplina(c, did){
   return h + inscHTML;
 }
 
+async function descargarPDF(c){
+  if(!window.jspdf){ await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'});
+  const PW=doc.internal.pageSize.getWidth(); const M=40; let y=100;
+  const cn=id=>c.cursoNombre(id);
+  function put(txt,x,size,bold,rgb,lh){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(rgb[0],rgb[1],rgb[2]); doc.splitTextToSize(String(txt),PW-x-M).forEach(l=>{ if(y+lh>800){doc.addPage();y=54;} doc.text(l,x,y); y+=lh; }); }
+  doc.setFillColor(21,92,52); doc.rect(0,0,PW,74,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.text('UTEQ · Olimpiadas de Arquitectura 2026',M,34); doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(201,154,46); doc.text('Lista de participantes por disciplina y género',M,56); doc.setDrawColor(201,154,46); doc.setLineWidth(3); doc.line(0,74,PW,74);
+  const ordD={futbol:1,basquet:2,voleibol:3,atletismo:4,natacion:5,ajedrez:6,tenmesa:7,tencampo:8};
+  const disc=c.disciplinas.slice().sort((a,b)=>(ordD[a.id]||9)-(ordD[b.id]||9));
+  let te=0,ti=0;
+  disc.forEach(d=>{
+    const items=c.inscripciones.filter(x=>x.disciplina_id===d.id); if(!items.length) return;
+    if(y+40>800){doc.addPage();y=54;}
+    doc.setFillColor(238,245,239); doc.rect(M-8,y-13,PW-2*(M-8),22,'F');
+    put(d.nombre,M,13.5,true,[21,92,52],20); y+=4;
+    ['Masculino','Femenino'].forEach(rama=>{
+      const arr=items.filter(x=>x.rama===rama); if(!arr.length) return;
+      put(rama+'   ('+arr.length+')',M+2,11,true,[201,154,46],15);
+      arr.forEach((x,i)=>{
+        if(x.tipo==='equipo'){ te++; put(`${i+1}. ${x.nombre_equipo}   [${cn(x.curso_id)}]   ·  ${(x.jugadores||[]).length} jugadores`,M+12,10,true,[25,25,25],13);
+          (x.jugadores||[]).forEach(j=>put(`•  ${j.nombre||''}${j.cedula?'   —   C.I. '+j.cedula:''}`,M+28,9,false,[100,100,100],11.5)); }
+        else { ti++; put(`${i+1}. ${x.participante}   [${cn(x.curso_id)}]${x.cedula_part?'   —   C.I. '+x.cedula_part:''}${x.categoria?'   ·  '+x.categoria:''}`,M+12,10,false,[25,25,25],13);
+          (x.jugadores||[]).forEach(j=>put(`•  ${j.nombre||''}${j.cedula?'   —   C.I. '+j.cedula:''}`,M+28,9,false,[100,100,100],11.5)); }
+      });
+      y+=6;
+    });
+    y+=8;
+  });
+  put(`Total: ${te} equipos y ${ti} participantes individuales.`,M,10,true,[21,92,52],14);
+  doc.save('participantes-olimpiadas-2026.pdf');
+}
 function csvInscritos(c){
   const cn=id=>c.cursoNombre(id);
   const dn=id=>{const d=c.disciplinas.find(d=>d.id===id);return d?d.nombre:id;};
@@ -778,7 +810,7 @@ async function renderAdmin(){
   if(INS_RAMA!=='Todos') RAMA=INS_RAMA;
   if(ROL==='disciplina'){ panel.innerHTML=vistaDisciplina(c,DISC_ADMIN); bindAdmin(c); return; }
   let h='';
-  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ Descargar inscritos (CSV)</button></div>${insFiltroBar()}</div>`;
+  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ CSV</button> <button class="btn sm" data-pdf>⬇ PDF participantes</button></div>${insFiltroBar()}</div>`;
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" /></svg> Paralelos / Cursos</h2>
     <p class="sub">Se crean solos al inscribirse (Carrera + Nivel + Paralelo). Aquí puedes renombrarlos o eliminarlos.</p>
     <div class="row"><div style="flex:3"><input id="nuevoCurso" placeholder="Ej: 5to A"></div>
@@ -944,6 +976,7 @@ function bindAdmin(c){
   document.querySelectorAll('[data-reset-torneo]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar el sorteo y los partidos de esta disciplina en la rama '+RAMA+'?'))return; const did=b.dataset.resetTorneo; const eqset=new Set((await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); const removeIds=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).map(p=>p.id); await syncPartidos(removeIds,[]); await DB.setTorneo(dk(did),null); renderAdmin(); });
   document.querySelectorAll('[data-insrama]').forEach(b=>b.onclick=()=>{ INS_RAMA=b.dataset.insrama; renderAdmin(); });
   document.querySelectorAll('[data-descargar]').forEach(b=>b.onclick=()=>descargarInscritos(c));
+  document.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>descargarPDF(c));
   bindRama();
 }
 
