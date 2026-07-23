@@ -759,6 +759,70 @@ function vistaDisciplina(c, did){
   return h + inscHTML;
 }
 
+async function descargarCalendarioPDF(c){
+  if(!window.jspdf){ await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+  const ins=c.inscripciones; const cn=id=>c.cursoNombre(id);
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'});
+  const PW=doc.internal.pageSize.getWidth(), M=38; let y=54;
+  function norm(p){p=(p||'').trim();const m=p.match(/(\d+\w+)\s+(.*)/);if(!m)return p;const rest=m[2].replace(/[\s\-]/g,'').toUpperCase();return m[1]+' '+rest.split('').sort().join('');}
+  const PAIS={'1ro A':'España','2do A':'Egipto','2do BC':'Colombia','3ro AC':'Suiza','3ro B':'Inglaterra','4to A':'Alemania','4to BC':'Países Bajos','5to AC':'EEUU','5to B':'Francia','6to A':'Noruega','6to B':'Argentina','6to C':'Bélgica','7mo AB':'Ecuador','8vo AB':'Paraguay'};
+  function pais(p){ if(PAIS[norm(p)]) return PAIS[norm(p)]; const m=norm(p).match(/(\d+\w+)\s+([A-Z]+)/); if(m){ for(const k in PAIS){ const mk=k.match(/(\d+\w+)\s+([A-Z]+)/); if(mk&&mk[1]===m[1]&&mk[2].split('').some(l=>m[2].includes(l))) return PAIS[k]+'*'; } } return null; }
+  function teams(d,r){ const seen=new Set(); return ins.filter(x=>x.disciplina_id===d&&x.tipo==='equipo'&&x.rama===r).map(x=>({par:cn(x.curso_id),nom:x.nombre_equipo})).filter(t=>{const k=norm(t.par);if(seen.has(k))return false;seen.add(k);return true;}); }
+  function put(t,x,s,b,rgb,lh){doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(s);doc.setTextColor(rgb[0],rgb[1],rgb[2]);doc.splitTextToSize(String(t),PW-x-M).forEach(l=>{if(y+lh>805){doc.addPage();y=54;}doc.text(l,x,y);y+=lh;});}
+  function band(t){ if(y+30>805){doc.addPage();y=54;} doc.setFillColor(21,92,52);doc.rect(0,y-14,PW,26,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,M,y+3);y+=26;}
+  function sub(t){put(t,M,11.5,true,[201,154,46],16);}
+  function tbl(headers,rows,ws){ if(y+40>805){doc.addPage();y=54;} const colX=[]; let cx=M; const tot=ws.reduce((a,b)=>a+b,0); ws.forEach(w=>{colX.push(cx);cx+=(PW-2*M)*w/tot;}); const cw=i=>((PW-2*M)*ws[i]/tot);
+    function rowH(cells,head){ const wr=cells.map((cc,i)=>{doc.setFont('helvetica',head?'bold':'normal');doc.setFontSize(head?9:8.6);return doc.splitTextToSize(String(cc),cw(i)-8);}); const mh=Math.max(14,...wr.map(w=>w.length*10+6)); if(y+mh>805){doc.addPage();y=54;} doc.setFillColor(head?21:245,head?92:250,head?52:246); doc.rect(M,y,PW-2*M,mh,'F'); doc.setDrawColor(210,225,214); doc.rect(M,y,PW-2*M,mh); wr.forEach((w,i)=>{doc.setTextColor(head?255:30,head?255:40,head?255:44);let ty=y+11;w.forEach(l=>{doc.text(l,colX[i]+4,ty);ty+=10;});}); y+=mh; }
+    rowH(headers,true); rows.forEach(r=>rowH(r,false)); y+=6;
+  }
+  function hm(mn){return String(Math.floor(mn/60)).padStart(2,'0')+'h'+String(mn%60).padStart(2,'0');}
+  function slot(st,d,i){return hm(st+i*d)+'–'+hm(st+i*d+d);}
+  function chunk(a,n){const o=[];for(let i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o;}
+  function low(s){return (s||'').trim().toLowerCase();}
+  const S=600;
+  doc.setFillColor(21,92,52);doc.rect(0,0,PW,70,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text('UTEQ · Olimpiadas de Arquitectura 2026',M,34);doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(201,154,46);doc.text('Programación general — jornadas de 7 horas (10h00–17h00)',M,55);y=92;
+  sub('Supuestos');
+  ['Fútbol masculino: nombres de país por paralelo (3ro A-C = Suiza; EEUU sin duplicado; 14 equipos).','Fútbol femenino: lista inscrita con país ligado al paralelo de los hombres (* = asignado por aproximación).','Resto de equipos: nombre por Nivel-Paralelo. Individuales: predomina el nombre del participante.','Cada disciplina en su propio escenario; dentro de cada uno no hay choques de horario. Ajedrez es mixto.'].forEach(t=>put('•  '+t,M+6,9.2,false,[40,40,44],12));
+  band('Fútbol masculino — Día 1 (14 equipos)');
+  put('Calendario del texto con nombres de país. Bloques de 50 minutos en dos canchas.',M,9,false,[90,90,90],13);
+  const P={'1ro A':'España','8vo A-B':'Paraguay','3ro A-C':'Suiza','6to A':'Noruega','2do A':'Egipto','7mo A-B':'Ecuador','2do B-C':'Colombia','6to C':'Bélgica','3ro B':'Inglaterra','5to A-C':'EEUU','5to B':'Francia','6to B':'Argentina','4to A':'Alemania','4to B-C':'Países Bajos'};
+  const pm=x=>P[x]||x;
+  const fm=[
+   ['10h00–10h50','P1: '+pm('1ro A')+' vs '+pm('8vo A-B'),'P2: '+pm('3ro A-C')+' vs '+pm('6to A')],
+   ['10h50–11h40','P3: '+pm('2do A')+' vs '+pm('7mo A-B'),'P4: '+pm('2do B-C')+' vs '+pm('6to C')],
+   ['11h40–12h30','P5: '+pm('3ro B')+' vs '+pm('5to A-C'),'P6: '+pm('5to B')+' vs '+pm('6to B')],
+   ['12h30–13h20','P7: '+pm('4to A')+' vs '+pm('4to B-C'),'P8: Ganador P1 vs Perdedor P2'],
+   ['13h20–14h10','P9: Ganador P2 vs Perdedor P3','P10: Ganador P3 vs Perdedor P4'],
+   ['14h10–15h00','P11: Ganador P4 vs Perdedor P5','P12: Ganador P5 vs Perdedor P6'],
+   ['15h00–15h50','Profesores de Arquitectura vs FCI','(cancha ocupada)'],
+   ['15h50–16h40','P13: Ganador P6 vs Perdedor P7','P14: Ganador P7 vs Perdedor P1'],
+  ];
+  tbl(['Horario','Cancha 1','Cancha 2'],fm,[1,2,2]);
+  put('Clasifican a cuartos: los 7 ganadores de P8–P14 + el mejor perdedor.',M,8.6,false,[90,90,90],12);
+  doc.addPage();y=54; band('Fútbol femenino — Día 2 (10 equipos)');
+  const fF=teams('futbol','Femenino').sort((a,b)=>norm(a.par).localeCompare(norm(b.par)));
+  const fFc=fF.map(t=>({par:t.par,pais:t.nom||pais(t.par)||('('+t.par+')')}));
+  sub('Equipos'); tbl(['Paralelo','Equipo'],fFc.map(t=>[t.par,t.pais]),[1,1.6]);
+  const pares=[]; for(let i=0;i<fFc.length;i+=2){ if(fFc[i+1]) pares.push([fFc[i].pais,fFc[i+1].pais]); }
+  sub('Primera ronda'); tbl(['Serie','Horario','Emparejamiento'],pares.map((p,i)=>['S'+(i+1),slot(S,40,i),p[0]+' vs '+p[1]]),[0.6,1.1,2.2]);
+  sub('Segunda ronda (cruces)'); const seg=[]; for(let i=0;i<pares.length;i++){ seg.push(['S'+(6+i),slot(S,40,5+i),'Ganador S'+(i+1)+' vs Perdedor S'+(((i+1)%pares.length)+1)]); } tbl(['Serie','Horario','Emparejamiento'],seg,[0.6,1.1,2.2]);
+  function equipoDep(titulo,d,r,prev,dur){ sub(titulo); const t=teams(d,r); if(!t.length){ put('Sin equipos inscritos.',M+6,9,false,[192,57,43],12); return; } tbl(['Paralelo','Nombre'],t.map(x=>[x.par,x.nom]),[1,2]); const n=t.length; const nota=n<prev?'⚠ Inscritos: '+n+'. Cuadro de '+prev+': falta(n) '+(prev-n)+'.':n>prev?'⚠ Inscritos: '+n+' (cuadro de '+prev+'): '+(n-prev)+' de más.':'✔ '+n+' equipos.'; put(nota,M+6,9,true,(n!==prev?[192,57,43]:[21,92,52]),13); const pr=[]; for(let i=0;i<t.length-1;i+=2)pr.push(t[i].par+' vs '+t[i+1].par); if(pr.length) tbl(['Horario','Partido (1ª ronda)'],pr.map((p,i)=>[slot(S,dur,i),p]),[1,3]); }
+  doc.addPage();y=54; band('Vóley'); equipoDep('Vóley masculino','voleibol','Masculino',8,40); equipoDep('Vóley femenino','voleibol','Femenino',4,40);
+  doc.addPage();y=54; band('Básquet'); equipoDep('Básquet masculino','basquet','Masculino',8,40); equipoDep('Básquet femenino','basquet','Femenino',4,40);
+  doc.addPage();y=54; band('Natación — piscina de 8 carriles');
+  put('El grupo de relevos se integra a 25 m libre individual. Cada prueba en series de hasta 8 nadadores.',M,9,false,[90,90,90],13);
+  const na=ins.filter(x=>x.disciplina_id==='natacion'&&x.tipo!=='equipo'); const relN=ins.find(x=>x.disciplina_id==='natacion'&&/relevos/i.test(x.categoria||'')); const relM=(relN&&relN.jugadores||[]).map(j=>j.nombre);
+  const pruebas=['25 m libre','50 m libre','25 m pecho','25 m Mariposa']; let heats=[];
+  ['Masculino','Femenino'].forEach(r=>{ pruebas.forEach(prb=>{ let names=na.filter(x=>x.rama===r&&(x.categoria||'')===prb).map(x=>x.participante); if(r==='Masculino'&&prb==='25 m libre'){ relM.forEach(nm=>{ if(!names.some(x=>low(x)===low(nm))) names.push(nm); }); } if(!names.length) return; chunk(names,8).forEach(h=>heats.push({r,prb,h})); }); });
+  let hi=0; tbl(['Horario','Prueba · Rama','Nadadores (máx. 8)'],heats.map(ht=>[slot(S,10,hi++),ht.prb+' · '+ht.r,ht.h.join(' · ')]),[1,1.5,3.2]);
+  doc.addPage();y=54; band('Atletismo — pista'); const at=ins.filter(x=>x.disciplina_id==='atletismo'&&x.tipo!=='equipo'); let ah=[]; ['Masculino','Femenino'].forEach(r=>{ const names=at.filter(x=>x.rama===r&&/100/.test(x.categoria||'')).map(x=>x.participante); chunk(names,8).forEach(h=>ah.push({r,h})); }); let ai=0; sub('100 metros'); tbl(['Horario','Serie 100 m · Rama','Corredores'],ah.map(x=>[slot(S,12,ai++),'100 m · '+x.r,x.h.join(' · ')]),[1,1.4,3.2]);
+  const relEq=ins.filter(x=>x.disciplina_id==='atletismo'&&/relevos/i.test(x.categoria||'')); sub('Relevos 4x100'); if(relEq.length){ let rk=0; const st=S+ah.length*12; tbl(['Horario','Rama','Equipo · Paralelo'],relEq.map(x=>[slot(st,15,rk++),x.rama,(x.participante||'Posta')+' · '+cn(x.curso_id)]),[1,1,3]); } else put('Sin relevos inscritos.',M+6,9,false,[192,57,43],12);
+  doc.addPage();y=54; band('Ajedrez — mixto'); const aj=ins.filter(x=>x.disciplina_id==='ajedrez'&&x.tipo!=='equipo').map(x=>({n:x.participante,r:x.rama,p:cn(x.curso_id)})); put('Torneo único mixto con '+aj.length+' jugadores. Sistema Suizo a 5 rondas (30 min c/u).',M,9,false,[90,90,90],13); sub('Jugadores'); tbl(['#','Jugador/a','Rama','Paralelo'],aj.map((x,i)=>[i+1,x.n,x.r,x.p]),[0.4,2.2,0.8,0.8]); sub('Rondas'); tbl(['Ronda','Horario'],[1,2,3,4,5].map((r,i)=>['Ronda '+r,slot(S,30,i)]),[1,2]);
+  doc.addPage();y=54; band('Tenis de mesa'); const tm=ins.filter(x=>x.disciplina_id==='tenmesa'&&x.tipo!=='equipo'); ['Masculino','Femenino'].forEach(r=>{ const L=tm.filter(x=>x.rama===r).map(x=>({n:x.participante,p:cn(x.curso_id)})); if(!L.length) return; sub('Tenis de mesa '+r+' ('+L.length+')'); tbl(['#','Jugador/a','Paralelo'],L.map((x,i)=>[i+1,x.n,x.p]),[0.4,2.4,0.9]); const pr=[];for(let i=0;i<L.length-1;i+=2)pr.push(L[i].n+' vs '+L[i+1].n); if(L.length%2)pr.push(L[L.length-1].n+' (pasa directo)'); tbl(['Horario','Primera ronda'],pr.map((p,i)=>[slot(S,20,i),p]),[1,3]); });
+  doc.addPage();y=54; band('Tenis de campo'); const tc=ins.filter(x=>x.disciplina_id==='tencampo'&&x.tipo!=='equipo'); ['Masculino','Femenino'].forEach(r=>{ const L=tc.filter(x=>x.rama===r).map(x=>({n:x.participante,p:cn(x.curso_id)})); if(!L.length) return; sub('Tenis de campo '+r+' ('+L.length+')'); tbl(['#','Jugador/a','Paralelo'],L.map((x,i)=>[i+1,x.n,x.p]),[0.4,2.4,0.9]); const pr=[];for(let i=0;i<L.length-1;i+=2)pr.push(L[i].n+' vs '+L[i+1].n); tbl(['Horario','Fase','Partido'],pr.map((p,i)=>[slot(S,25,i),L.length<=4?'Semifinal':'1ª ronda',p]),[1,0.8,3]); });
+  doc.save('Calendario-Olimpiadas-2026.pdf');
+}
+
 async function descargarPDF(c){
   if(!window.jspdf){ await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'});
@@ -810,7 +874,7 @@ async function renderAdmin(){
   if(INS_RAMA!=='Todos') RAMA=INS_RAMA;
   if(ROL==='disciplina'){ panel.innerHTML=vistaDisciplina(c,DISC_ADMIN); bindAdmin(c); return; }
   let h='';
-  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ CSV</button> <button class="btn sm" data-pdf>⬇ PDF participantes</button></div>${insFiltroBar()}</div>`;
+  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ CSV</button> <button class="btn sm" data-pdf>⬇ PDF participantes</button> <button class="btn sm" data-cal>⬇ Calendario (PDF)</button></div>${insFiltroBar()}</div>`;
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" /></svg> Paralelos / Cursos</h2>
     <p class="sub">Se crean solos al inscribirse (Carrera + Nivel + Paralelo). Aquí puedes renombrarlos o eliminarlos.</p>
     <div class="row"><div style="flex:3"><input id="nuevoCurso" placeholder="Ej: 5to A"></div>
@@ -977,6 +1041,7 @@ function bindAdmin(c){
   document.querySelectorAll('[data-insrama]').forEach(b=>b.onclick=()=>{ INS_RAMA=b.dataset.insrama; renderAdmin(); });
   document.querySelectorAll('[data-descargar]').forEach(b=>b.onclick=()=>descargarInscritos(c));
   document.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>descargarPDF(c));
+  document.querySelectorAll('[data-cal]').forEach(b=>b.onclick=()=>descargarCalendarioPDF(c));
   bindRama();
 }
 
