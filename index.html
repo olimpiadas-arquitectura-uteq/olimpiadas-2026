@@ -758,13 +758,27 @@ function vistaDisciplina(c, did){
   return h + inscHTML;
 }
 
+function csvInscritos(c){
+  const cn=id=>c.cursoNombre(id);
+  const dn=id=>{const d=c.disciplinas.find(d=>d.id===id);return d?d.nombre:id;};
+  const ordD={futbol:1,basquet:2,voleibol:3,atletismo:4,natacion:5,ajedrez:6,tenmesa:7,tencampo:8};
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const rows=[['Disciplina','Rama','Tipo','Equipo/Participante','Paralelo','Prueba','Cedula','Responsable','Telefono','Email','N_Integrantes','Integrantes (nombre - cedula)']];
+  c.inscripciones.slice().sort((a,b)=>(ordD[a.disciplina_id]||9)-(ordD[b.disciplina_id]||9)||String(a.rama||'').localeCompare(String(b.rama||''))||String(a.nombre_equipo||a.participante||'').localeCompare(String(b.nombre_equipo||b.participante||''))).forEach(x=>{
+    const r=x.responsable||{}; const jug=x.jugadores||[];
+    const integ=jug.map(j=>`${j.nombre||''}${j.cedula?' - '+j.cedula:''}`).join(' | ');
+    rows.push([dn(x.disciplina_id),x.rama,x.tipo==='equipo'?'Equipo':'Individual',x.tipo==='equipo'?x.nombre_equipo:x.participante,cn(x.curso_id),x.categoria||'',x.tipo==='equipo'?'':(x.cedula_part||''),r.nombre||'',r.tel||'',r.email||'',jug.length||'',integ]);
+  });
+  return '﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n');
+}
+function descargarInscritos(c){ const csv=csvInscritos(c); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='inscritos-olimpiadas-2026.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
 async function renderAdmin(){
   const c=await ctx();
   const panel=$('#adminPanel');
   if(INS_RAMA!=='Todos') RAMA=INS_RAMA;
   if(ROL==='disciplina'){ panel.innerHTML=vistaDisciplina(c,DISC_ADMIN); bindAdmin(c); return; }
   let h='';
-  h+=`<div class="card" style="padding:12px 16px 6px"><b>Vista por género</b>${insFiltroBar()}</div>`;
+  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ Descargar inscritos (CSV)</button></div>${insFiltroBar()}</div>`;
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" /></svg> Paralelos / Cursos</h2>
     <p class="sub">Se crean solos al inscribirse (Carrera + Nivel + Paralelo). Aquí puedes renombrarlos o eliminarlos.</p>
     <div class="row"><div style="flex:3"><input id="nuevoCurso" placeholder="Ej: 5to A"></div>
@@ -929,6 +943,7 @@ function bindAdmin(c){
   document.querySelectorAll('[data-podio-bracket]').forEach(b=>b.onclick=()=>podioDesdeBracket(b.dataset.podioBracket));
   document.querySelectorAll('[data-reset-torneo]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar el sorteo y los partidos de esta disciplina en la rama '+RAMA+'?'))return; const did=b.dataset.resetTorneo; const eqset=new Set((await DB.inscripciones()).filter(x=>x.disciplina_id===did&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); const removeIds=(await DB.partidos()).filter(p=>p.disciplina_id===did&&eqset.has(p.local_id)).map(p=>p.id); await syncPartidos(removeIds,[]); await DB.setTorneo(dk(did),null); renderAdmin(); });
   document.querySelectorAll('[data-insrama]').forEach(b=>b.onclick=()=>{ INS_RAMA=b.dataset.insrama; renderAdmin(); });
+  document.querySelectorAll('[data-descargar]').forEach(b=>b.onclick=()=>descargarInscritos(c));
   bindRama();
 }
 
