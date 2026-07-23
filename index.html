@@ -543,6 +543,8 @@ async function renderPosiciones(){
     html+=`</tbody></table>`;
   }
   html+=`</div>`;
+  { const _tot=FX.length,_dn=FX.filter(e=>estadoEv(e).k==='done').length,_lv=FX.filter(e=>estadoEv(e).k==='live').length,_pc=Math.round(_dn/_tot*100); const _px=FX.filter(e=>evStart(e)>new Date()).sort((a,b)=>evStart(a)-evStart(b))[0];
+    html+=`<div class="card"><h2 class="sec">\ud83d\udcca Avance de las Olimpiadas</h2><div style="background:#eef4f0;border-radius:10px;height:14px;overflow:hidden;margin:6px 0"><div style="height:100%;width:${_pc}%;background:linear-gradient(90deg,#155C34,#1c7a45)"></div></div><p class="mini" style="margin:2px 0 0"><b>${_dn}</b> de <b>${_tot}</b> eventos finalizados (${_pc}%)${_lv?` \u00b7 <span style="color:#c0392b;font-weight:700">${_lv} en curso</span>`:''}. Las horas aparecen 20 min antes de cada evento.</p>${_px?`<div style="margin-top:8px;padding:8px 12px;border-left:4px solid #C99A2E;background:#fbfaf5;border-radius:6px"><b>Pr\u00f3ximo:</b> ${esc2(_px.disc)} \u2014 ${esc2(_px.m)}<br>${chipHTML(estadoEv(_px))}</div>`:''}</div>`; }
   html+=`<div class="card" style="padding:14px 16px 4px"><h2 class="sec" style="margin:0 0 4px">Resultados por disciplina \u2014 rama ${RAMA}</h2>${ramaBar()}</div>`;
 
   c.disciplinas.forEach(d=>{
@@ -560,7 +562,7 @@ async function renderPosiciones(){
         const gp=parts.filter(p=>p.fase==='grupo');
         if(gp.length){ html+=`<h3>Calendario</h3><table><tbody>`; gp.forEach(p=>html+=partidoLinePub(p,equipos)); html+=`</tbody></table>`; }
         const ko=parts.filter(p=>p.fase!=='grupo');
-        if(ko.length){ html+=`<h3>Eliminatorias</h3>`; ['cuartos','semi','final','tercer'].forEach(f=>{const ms=ko.filter(p=>p.fase===f);if(!ms.length)return;html+=`<div class="mini"><b>${FASE_NOM[f]}</b></div><table><tbody>`;ms.forEach(p=>html+=partidoLinePub(p,equipos));html+=`</tbody></table>`;}); }
+        if(ko.length){ html+=`<h3>Eliminatorias</h3>`+bracketGraph(ko,equipos); }
       } else {
         const tab=calcularLiga(equipos,parts);
         html+=`<table><thead><tr><th>#</th><th class="left">Equipo</th><th>Paralelo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>DG</th><th>Pts</th></tr></thead><tbody>`;
@@ -580,6 +582,11 @@ async function renderPosiciones(){
       podio.forEach(p=>html+=`<span class="chip">${medalIco(p.puesto)} <b>${esc(c.cursoNombre(p.curso_id))}</b></span>`);
       html+=`</div>`;
     } else if(d.tipo==='individual'){ html+=`<div class="empty">Podio aún no definido.</div>`; }
+    { const _lab=mapLabel(d.id,RAMA);
+      if(d.id==='ajedrez'){ html+=`<h3>Rondas (sistema suizo)</h3>`+chessRoundsHTML(); }
+      else if(PLAN_BRACKET[_lab]){ const _eq=new Set(c.inscripciones.filter(x=>x.disciplina_id===d.id&&x.tipo==='equipo'&&x.rama===RAMA).map(e=>e.id)); const _hasKo=c.partidos.some(p=>p.disciplina_id===d.id&&_eq.has(p.local_id)&&p.fase&&p.fase!=='grupo'); if(!_hasKo) html+=`<h3>Llave prevista</h3>`+bracketGraphPlanned(PLAN_BRACKET[_lab]); }
+      const _sd=schedRows(_lab); if(_sd) html+=`<h3>Horario (aparece 20 min antes)</h3>`+_sd;
+    }
     html+=`</div></details>`;
   });
   cont.innerHTML=html; bindRama();
@@ -876,7 +883,7 @@ async function renderAdmin(){
   if(INS_RAMA!=='Todos') RAMA=INS_RAMA;
   if(ROL==='disciplina'){ panel.innerHTML=vistaDisciplina(c,DISC_ADMIN); bindAdmin(c); return; }
   let h='';
-  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b><button class="btn sm" data-descargar>⬇ CSV</button> <button class="btn sm" data-pdf>⬇ PDF participantes</button> <button class="btn sm" data-cal>⬇ Calendario (PDF)</button></div>${insFiltroBar()}</div>`;
+  h+=`<div class="card" style="padding:12px 16px 6px"><div class="flex-between" style="flex-wrap:wrap;gap:8px"><b>Vista por género</b></div>${insFiltroBar()}</div>`;
   h+=`<div class="card"><h2 class="sec"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" /></svg> Paralelos / Cursos</h2>
     <p class="sub">Se crean solos al inscribirse (Carrera + Nivel + Paralelo). Aquí puedes renombrarlos o eliminarlos.</p>
     <div class="row"><div style="flex:3"><input id="nuevoCurso" placeholder="Ej: 5to A"></div>
@@ -1071,7 +1078,7 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
    medallero, tablas de posiciones, llaves y horarios con
    revelado progresivo (20 min antes de cada evento).
    ============================================================ */
-const SIN_CONEXION=true;
+const SIN_CONEXION=false;
 const DIA_FECHA={1:'2026-07-23',2:'2026-08-01'};
 const DIA_LBL={1:'Día 1 · Jueves 23 de Julio',2:'Día 2 · Sábado 1 de Agosto'};
 const REVEAL_MIN=20;
@@ -1220,7 +1227,7 @@ function llaveHTML(disc){
   l.forEach(([r,d])=>h+=`<li style="margin:2px 0"><b>${esc2(r)}:</b> <span class="mini">${esc2(d)}</span></li>`);
   return h+'</ul></div>';
 }
-function renderPosiciones(){
+function renderPosiciones_OFF(){
   const cont=document.getElementById('tab-posiciones'); if(!cont) return;
   const total=FX.length, done=FX.filter(e=>estadoEv(e).k==='done').length, live=FX.filter(e=>estadoEv(e).k==='live').length;
   const pct=Math.round(done/total*100);
@@ -1293,6 +1300,59 @@ function renderParticipantes(){
   h+=`</div>`;
   cont.innerHTML=h;
 }
+/* ==== Llaves gráficas + rondas de ajedrez ==== */
+(function(){ const st=document.createElement('style'); st.textContent=`
+.bkwrap{display:flex;gap:16px;overflow-x:auto;padding:6px 2px;align-items:center}
+.bkcol{display:flex;flex-direction:column;justify-content:space-around;gap:10px;min-width:150px}
+.bkhdr{font-size:.68rem;font-weight:800;color:#155C34;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.bkmatch{border:1px solid #cfe0d5;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.bkteam{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;font-size:.82rem;border-bottom:1px solid #eef2ef;color:#243b2c}
+.bkteam:last-child{border-bottom:0}
+.bkteam b{color:#155C34;min-width:16px;text-align:right}
+.bkwin{background:#eaf6ee;font-weight:800}
+`; document.head.appendChild(st); })();
+const PLAN_BRACKET={
+ 'Fútbol Masculino':[['Cuartos',[['Clasificado 1','Clasificado 8'],['Clasificado 4','Clasificado 5'],['Clasificado 3','Clasificado 6'],['Clasificado 2','Clasificado 7']]],['Semifinal',[['Gan. Cuartos 1','Gan. Cuartos 4'],['Gan. Cuartos 2','Gan. Cuartos 3']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Fútbol Femenino':[['Cuartos',[['Clasificada 1','Clasificada 8'],['Clasificada 4','Clasificada 5'],['Clasificada 3','Clasificada 6'],['Clasificada 2','Clasificada 7']]],['Semifinal',[['Gan. Cuartos 1','Gan. Cuartos 4'],['Gan. Cuartos 2','Gan. Cuartos 3']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Vóley Masculino':[['Semifinal',[['1° Grupo A','Mejor 2°'],['1° Grupo B','1° Grupo C']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Vóley Femenino':[['Final',[['1° del triangular','2° del triangular']]]],
+ 'Básquet Masculino':[['Semifinal',[['1° Grupo A','2° Grupo B'],['1° Grupo B','2° Grupo A']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Básquet Femenino':[['Semifinal',[['1° Grupo A','2° Grupo B'],['1° Grupo B','2° Grupo A']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Tenis de mesa':[['Semifinal',[['1° Grupo A','Mejor 2°'],['1° Grupo B','1° Grupo C']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Tenis de campo M':[['Semifinal',[['Glenn Vinueza','James Macías'],['Xavier Turriago','Jenner Erraes']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]]
+};
+function mapLabel(did,rama){
+  const m={futbol:'Fútbol',voleibol:'Vóley',basquet:'Básquet'};
+  if(m[did]) return m[did]+' '+rama;
+  return {tenmesa:'Tenis de mesa',tencampo:'Tenis de campo M',ajedrez:'Ajedrez',natacion:'Natación',atletismo:'Atletismo'}[did]||'';
+}
+function bracketGraph(ko,equipos){
+  const FAS=[['cuartos','Cuartos'],['semi','Semifinal'],['final','Final']];
+  let cols='';
+  FAS.forEach(([f,lbl])=>{
+    const ms=ko.filter(p=>p.fase===f).sort((a,b)=>a.orden-b.orden); if(!ms.length) return;
+    let boxes='';
+    ms.forEach(p=>{ const jug=p.jugado, gl=+p.gl, gv=+p.gv; const wl=jug&&gl>gv, wv=jug&&gv>gl;
+      boxes+=`<div class="bkmatch"><div class="bkteam ${wl?'bkwin':''}"><span>${nombreEq(equipos,p.local_id)}</span><b>${jug?gl:''}</b></div><div class="bkteam ${wv?'bkwin':''}"><span>${nombreEq(equipos,p.visitante_id)}</span><b>${jug?gv:''}</b></div></div>`; });
+    cols+=`<div class="bkcol"><div class="bkhdr">${lbl}</div>${boxes}</div>`;
+  });
+  const ter=ko.filter(p=>p.fase==='tercer')[0];
+  const extra=ter?`<div class="mini" style="margin-top:6px"><b>3er puesto:</b> ${nombreEq(equipos,ter.local_id)} ${ter.jugado?`<b>${ter.gl}-${ter.gv}</b>`:'vs'} ${nombreEq(equipos,ter.visitante_id)}</div>`:'';
+  return cols?`<div class="bkwrap">${cols}</div>${extra}`:'';
+}
+function bracketGraphPlanned(cols){
+  let out='';
+  cols.forEach(([lbl,ms])=>{ let boxes=''; ms.forEach(pr=>{ boxes+=`<div class="bkmatch"><div class="bkteam"><span>${esc2(pr[0])}</span></div><div class="bkteam"><span>${esc2(pr[1])}</span></div></div>`; }); out+=`<div class="bkcol"><div class="bkhdr">${esc2(lbl)}</div>${boxes}</div>`; });
+  return `<div class="bkwrap">${out}</div>`;
+}
+function chessRoundsHTML(){
+  const howto={'Ronda 1':'Emparejamiento inicial por siembra: Irvin Macías–Luis Pinango, Bravo Jostin–Sebastián Ube, Henner Velásquez–Sebastián Buenaño, Castillo Alejandro–Sonnia Caravaca.','Ronda 2':'Se emparejan los jugadores con el MISMO puntaje (ganadores con ganadores, etc.), sin repetir rival.','Ronda 3':'Por puntaje acumulado, sin repetir rival.','Ronda 4':'Por puntaje acumulado, sin repetir rival.','Ronda 5':'Última ronda por puntaje. Gana quien más suma (Victoria 1 · Tablas 0,5 · Derrota 0). Desempate: Buchholz.'};
+  const evs=FX.filter(e=>e.disc==='Ajedrez').sort((a,b)=>evStart(a)-evStart(b));
+  let h=`<div class="mini" style="margin:4px 0"><b>Sistema suizo · 8 jugadores · 5 rondas.</b> Todas las partidas de una ronda se juegan a la vez; se rankea por puntos (no hay eliminación).</div><table><thead><tr><th class="left">Estado / hora</th><th class="left">Ronda</th><th class="left">Cómo se juega</th></tr></thead><tbody>`;
+  evs.forEach(e=>{ h+=`<tr><td class="left">${chipHTML(estadoEv(e))}</td><td class="left"><b>${esc2(e.m)}</b></td><td class="left">${esc2(howto[e.m]||'')}</td></tr>`; });
+  return h+`</tbody></table>`;
+}
+
 setInterval(function(){ const p=document.getElementById('tab-posiciones'); if(p&&!p.classList.contains('hidden')) renderPosiciones(); const c=document.getElementById('tab-calendario'); if(c&&!c.classList.contains('hidden')) renderCalendario(); },30000);
 
 if(MODE==='sheets'){ _data=loadSnap(); }
