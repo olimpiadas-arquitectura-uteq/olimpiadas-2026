@@ -828,7 +828,7 @@ async function descargarCalendarioPDF(c){
   function equipoDep(titulo,d,r,prev,dur){ sub(titulo); const t=teams(d,r); if(!t.length){ put('Sin equipos inscritos.',M+6,9,false,[192,57,43],12); return; } tbl(['Paralelo','Nombre'],t.map(x=>[x.par,x.nom]),[1,2]); const n=t.length; const nota=n<prev?'⚠ Inscritos: '+n+'. Cuadro de '+prev+': falta(n) '+(prev-n)+'.':n>prev?'⚠ Inscritos: '+n+' (cuadro de '+prev+'): '+(n-prev)+' de más.':'✔ '+n+' equipos.'; put(nota,M+6,9,true,(n!==prev?[192,57,43]:[21,92,52]),13); const pr=[]; for(let i=0;i<t.length-1;i+=2)pr.push(t[i].par+' vs '+t[i+1].par); if(pr.length) tbl(['Horario','Partido (1ª ronda)'],pr.map((p,i)=>[slot(S,dur,i),p]),[1,3]); }
   doc.addPage();y=54; band('Vóley'); equipoDep('Vóley masculino','voleibol','Masculino',8,40); equipoDep('Vóley femenino','voleibol','Femenino',4,40);
   doc.addPage();y=54; band('Básquet'); equipoDep('Básquet masculino','basquet','Masculino',8,40); equipoDep('Básquet femenino','basquet','Femenino',4,40);
-  doc.addPage();y=54; band('Natación — piscina de 8 carriles');
+  doc.addPage();y=54; band('Natación — piscina de 6 carriles');
   put('El grupo de relevos se integra a 25 m libre individual. Cada prueba en series de hasta 8 nadadores.',M,9,false,[90,90,90],13);
   const na=ins.filter(x=>x.disciplina_id==='natacion'&&x.tipo!=='equipo'); const relN=ins.find(x=>x.disciplina_id==='natacion'&&/relevos/i.test(x.categoria||'')); const relM=(relN&&relN.jugadores||[]).map(j=>j.nombre);
   const pruebas=['25 m libre','50 m libre','25 m pecho','25 m Mariposa']; let heats=[];
