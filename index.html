@@ -1115,7 +1115,7 @@ function chipHTML(est){
 }
 /* --- Calendario oficial --- */
 const FX=[
- // ===== DÍA 1 · Fútbol Masculino — fase previa (oficial · bloques de 50 min · 2 canchas) =====
+ // ===== DÍA 1 · Fútbol Masculino — fase previa (oficial · 50 min · 2 canchas · SIN paralelos hasta las 15h00) =====
  {d:1,h:'10:00',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P1 · España vs Paraguay'},
  {d:1,h:'10:00',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P2 · Suiza vs Noruega'},
  {d:1,h:'10:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P3 · Egipto vs Ecuador'},
@@ -1131,7 +1131,21 @@ const FX=[
  {d:1,h:'15:00',dur:50,disc:'Fútbol Masculino',fase:'Amistoso',m:'Profesores Arquitectura vs Profesores FCI (ambas canchas)'},
  {d:1,h:'15:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P13 · Ganador P6 vs Perdedor P7'},
  {d:1,h:'15:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P14 · Ganador P7 vs Perdedor P1'},
- // ===== DÍA 2 · Fútbol Femenino — fase previa (oficial · bloques de 40 min · 2 canchas) =====
+ // ===== DÍA 1 · Desde las 15h50 (tras el partido de docentes 15h00–15h50) — individuales en paralelo =====
+ {d:1,h:'15:50',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Masculino'},
+ {d:1,h:'16:02',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Femenino'},
+ {d:1,h:'16:14',dur:12,disc:'Natación',fase:'Final',m:'50 m libre — Masculino'},
+ {d:1,h:'16:26',dur:12,disc:'Natación',fase:'Final',m:'50 m libre F / 25 m pecho M'},
+ {d:1,h:'15:50',dur:12,disc:'Atletismo',fase:'Final',m:'100 m — Masculino'},
+ {d:1,h:'16:02',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 1'},
+ {d:1,h:'16:14',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 2'},
+ {d:1,h:'16:26',dur:12,disc:'Atletismo',fase:'Final',m:'100 m Femenino · FINAL'},
+ {d:1,h:'16:38',dur:12,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Masculino'},
+ {d:1,h:'15:50',dur:18,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinal 1'},
+ {d:1,h:'16:08',dur:18,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinal 2'},
+ {d:1,h:'16:26',dur:12,disc:'Tenis de campo M',fase:'3er puesto',m:'3er puesto'},
+ {d:1,h:'16:38',dur:12,disc:'Tenis de campo M',fase:'Final',m:'Final'},
+ // ===== DÍA 2 · Fútbol Femenino — fase previa (oficial · 40 min · 2 canchas) =====
  {d:2,h:'10:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S1 · España vs Egipto'},
  {d:2,h:'10:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S2 · Colombia vs Suiza'},
  {d:2,h:'10:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S3 · Alemania vs Países Bajos'},
@@ -1142,7 +1156,7 @@ const FX=[
  {d:2,h:'12:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S8 · Ganador S3 vs Perdedor S4'},
  {d:2,h:'12:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S9 · Ganador S4 vs Perdedor S5'},
  {d:2,h:'12:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S10 · Ganador S5 vs Perdedor S1'},
- // ===== DÍA 2 · Fútbol — FINALES M y F (13h20–16h40 · 2 canchas · todos las ven) =====
+ // ===== DÍA 2 · Fútbol — FINALES M y F (13h20–16h40) =====
  {d:2,h:'13:20',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 1'},
  {d:2,h:'13:20',dur:25,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 1'},
  {d:2,h:'13:45',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 2'},
@@ -1159,7 +1173,7 @@ const FX=[
  {d:2,h:'15:50',dur:25,disc:'Fútbol Femenino',fase:'3er puesto',m:'3er puesto'},
  {d:2,h:'16:15',dur:25,disc:'Fútbol Masculino',fase:'Final',m:'FINAL'},
  {d:2,h:'16:15',dur:25,disc:'Fútbol Femenino',fase:'Final',m:'FINAL'},
- // ===== DÍA 2 · Resto de deportes en paralelo (08h00–13h20, sedes propias; terminan antes de las finales de fútbol) =====
+ // ===== DÍA 2 · Vóley, Básquet y Ajedrez en paralelo (08h00–13h20) =====
  {d:2,h:'08:00',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 1  (Cancha vóley 1)'},
  {d:2,h:'08:00',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornada 1  (Cancha vóley 2)'},
  {d:2,h:'08:15',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 2  (Cancha vóley 1)'},
@@ -1181,17 +1195,6 @@ const FX=[
  {d:2,h:'09:45',dur:60,disc:'Básquet Masculino',fase:'Llave',m:'Semifinales + 3º + Final'},
  {d:2,h:'10:45',dur:48,disc:'Básquet Femenino',fase:'Grupos',m:'Grupos A y B (4 partidos)'},
  {d:2,h:'11:33',dur:45,disc:'Básquet Femenino',fase:'Llave',m:'Semifinales + Final'},
- {d:2,h:'12:18',dur:36,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinales'},
- {d:2,h:'12:54',dur:24,disc:'Tenis de campo M',fase:'Final',m:'3er puesto + Final'},
- {d:2,h:'08:00',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Masculino'},
- {d:2,h:'08:12',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Femenino'},
- {d:2,h:'08:24',dur:12,disc:'Natación',fase:'Final',m:'50 m libre — Masculino'},
- {d:2,h:'08:36',dur:12,disc:'Natación',fase:'Final',m:'50 m libre F / 25 m pecho M'},
- {d:2,h:'08:00',dur:12,disc:'Atletismo',fase:'Final',m:'100 m — Masculino'},
- {d:2,h:'08:12',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 1'},
- {d:2,h:'08:24',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 2'},
- {d:2,h:'08:36',dur:12,disc:'Atletismo',fase:'Final',m:'100 m Femenino · FINAL'},
- {d:2,h:'08:48',dur:12,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Masculino'},
  {d:2,h:'08:00',dur:90,disc:'Tenis de mesa',fase:'Grupos',m:'Grupos (2 mesas)'},
  {d:2,h:'09:30',dur:24,disc:'Tenis de mesa',fase:'Llave',m:'Semifinales + Final'},
  {d:2,h:'08:00',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 1'},
