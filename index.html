@@ -142,18 +142,19 @@ details.acc .accbody{margin-top:14px}
       <h1 id="tituloEvento">Olimpiadas de Arquitectura 2026</h1>
       <p>Carrera de Arquitectura · Facultad de Ciencias de la Ingeniería · UTEQ</p>
     </div>
-    <div class="modo" id="modoBadge"></div>
+    <div class="modo" id="modoBadge" style="display:none"></div>
   </header>
 <div class="wrap">
   <nav class="tabs">
     <button data-tab="posiciones" class="act"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M18 2C17.1 2 16 3 16 4H8C8 3 6.9 2 6 2H2V11C2 12 3 13 4 13H6.2C6.6 15 7.9 16.7 11 17V19.08C8 19.54 8 22 8 22H16C16 22 16 19.54 13 19.08V17C16.1 16.7 17.4 15 17.8 13H20C21 13 22 12 22 11V2H18M6 11H4V4H6V11M20 11H18V4H20V11Z" /></svg> Posiciones</button>
     <button data-tab="calendario"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3 3.9 3 5V19A2 2 0 0 0 5 21H19A2 2 0 0 0 21 19V5C21 3.9 20.1 3 19 3M19 19H5V9H19V19M19 7H5V5H19V7M7 11H12V16H7V11Z" /></svg> Calendario</button>
-    <button data-tab="inscripcion"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M21.04 12.13C21.18 12.13 21.31 12.19 21.42 12.3L22.7 13.58C22.92 13.79 22.92 14.14 22.7 14.35L21.7 15.35L19.65 13.3L20.65 12.3C20.76 12.19 20.9 12.13 21.04 12.13M19.07 13.88L21.12 15.93L15.06 22H13V19.94L19.07 13.88M11 19L9 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H9.18C9.6 1.84 10.7 1 12 1C13.3 1 14.4 1.84 14.82 3H19C20.1 3 21 3.9 21 5V9L19 11V5H17V7H7V5H5V19H11M12 3C11.45 3 11 3.45 11 4C11 4.55 11.45 5 12 5C12.55 5 13 4.55 13 4C13 3.45 12.55 3 12 3Z" /></svg> Inscripción</button>
+    <button data-tab="participantes"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z" /></svg> Participantes</button>
     <button data-tab="admin" class="admin-oculto"><svg viewBox="0 0 24 24" class="ico" fill="currentColor"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" /></svg> Administración</button>
   </nav>
 
   <section id="tab-posiciones"></section>
     <section id="tab-calendario" class="hidden"></section>
+    <section id="tab-participantes" class="hidden"></section>
 
   <section id="tab-inscripcion" class="hidden">
     <form id="form" class="card">
@@ -512,9 +513,10 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('act'));
     b.classList.add('act');
-    ['posiciones','calendario','inscripcion','admin'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    ['posiciones','calendario','participantes','inscripcion','admin'].forEach(t=>{const el=$('#tab-'+t);if(el)el.classList.toggle('hidden',t!==b.dataset.tab);});
     if(b.dataset.tab==='posiciones') renderPosiciones();
     if(b.dataset.tab==='calendario') renderCalendario();
+    if(b.dataset.tab==='participantes') renderParticipantes();
     if(b.dataset.tab==='inscripcion') renderInscripcionCursos();
   };
 });
@@ -1064,10 +1066,239 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
     ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(function(ev){ tit.addEventListener(ev,stop); });
   }
 })();
+/* ============================================================
+   MÓDULO OFICIAL 2026 — Dashboard estático (sin conexión):
+   medallero, tablas de posiciones, llaves y horarios con
+   revelado progresivo (20 min antes de cada evento).
+   ============================================================ */
+const SIN_CONEXION=true;
+const DIA_FECHA={1:'2026-07-23',2:'2026-08-01'};
+const DIA_LBL={1:'Día 1 · Jueves 23 de Julio',2:'Día 2 · Sábado 1 de Agosto'};
+const REVEAL_MIN=20;
+function _pad(n){return String(n).padStart(2,'0');}
+function evStart(ev){return new Date(DIA_FECHA[ev.d]+'T'+ev.h+':00');}
+function evEnd(ev){return new Date(evStart(ev).getTime()+(ev.dur||20)*60000);}
+function hhmm(dt){return _pad(dt.getHours())+'h'+_pad(dt.getMinutes());}
+function estadoEv(ev){
+  const now=new Date(), st=evStart(ev), en=evEnd(ev), rev=new Date(st.getTime()-REVEAL_MIN*60000);
+  if(now>=en) return {k:'done', hora:hhmm(st), chip:'✅ Finalizado'};
+  if(now>=st) return {k:'live', hora:hhmm(st), chip:'🔴 En curso'};
+  if(now>=rev) return {k:'prep', hora:hhmm(st), chip:'🟡 Prepárense'};
+  return {k:'hidden', hora:null, chip:'🔒 Se revela 20 min antes'};
+}
+function esc2(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function chipHTML(est){
+  const col={done:'#5a6f62',live:'#c0392b',prep:'#8a6d1a',hidden:'#8a97a0'}[est.k];
+  const bg={done:'#eef4f0',live:'#fdecea',prep:'#fbf3dd',hidden:'#eef2f4'}[est.k];
+  const txt=est.hora?(est.chip+' · '+est.hora):est.chip;
+  return `<span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;color:${col};background:${bg};white-space:nowrap">${txt}</span>`;
+}
+/* --- Calendario oficial --- */
+const FX=[
+ {d:1,h:'10:00',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S1 · España vs Egipto'},
+ {d:1,h:'10:00',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S2 · Colombia vs Suiza'},
+ {d:1,h:'10:25',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S3 · Alemania vs Países Bajos'},
+ {d:1,h:'10:25',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S4 · Francia vs EEUU'},
+ {d:1,h:'10:50',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S5 · Argentina vs Paraguay'},
+ {d:1,h:'10:50',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S6 · Ganador S1 vs Perdedor S2'},
+ {d:1,h:'11:15',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S7 · Ganador S2 vs Perdedor S3'},
+ {d:1,h:'11:15',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S8 · Ganador S3 vs Perdedor S4'},
+ {d:1,h:'11:40',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S9 · Ganador S4 vs Perdedor S5'},
+ {d:1,h:'11:40',dur:25,disc:'Fútbol Femenino',fase:'Fase previa',m:'S10 · Ganador S5 vs Perdedor S1'},
+ {d:1,h:'12:05',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P1 · España vs Paraguay'},
+ {d:1,h:'12:05',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P2 · Suiza vs Noruega'},
+ {d:1,h:'12:30',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P3 · Egipto vs Ecuador'},
+ {d:1,h:'12:30',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P4 · Colombia vs Bélgica'},
+ {d:1,h:'12:55',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P5 · Inglaterra vs EEUU'},
+ {d:1,h:'12:55',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P6 · Francia vs Argentina'},
+ {d:1,h:'13:20',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P7 · Alemania vs Países Bajos'},
+ {d:1,h:'13:20',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P8 · Ganador P1 vs Perdedor P2'},
+ {d:1,h:'13:45',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P9 · Ganador P2 vs Perdedor P3'},
+ {d:1,h:'13:45',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P10 · Ganador P3 vs Perdedor P4'},
+ {d:1,h:'14:10',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P11 · Ganador P4 vs Perdedor P5'},
+ {d:1,h:'14:10',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P12 · Ganador P5 vs Perdedor P6'},
+ {d:1,h:'14:35',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P13 · Ganador P6 vs Perdedor P7'},
+ {d:1,h:'14:35',dur:25,disc:'Fútbol Masculino',fase:'Fase previa',m:'P14 · Ganador P7 vs Perdedor P1'},
+ {d:1,h:'15:00',dur:12,disc:'Tenis de campo M',fase:'Semifinal',m:'Glenn Vinueza vs James Macías'},
+ {d:1,h:'15:12',dur:12,disc:'Tenis de campo M',fase:'Semifinal',m:'Xavier Turriago vs Jenner Erraes'},
+ {d:1,h:'15:24',dur:12,disc:'Tenis de campo M',fase:'3er puesto',m:'Perdedores de semifinal'},
+ {d:1,h:'15:36',dur:12,disc:'Tenis de campo M',fase:'Final',m:'Ganadores de semifinal'},
+ {d:1,h:'15:00',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Masculino'},
+ {d:1,h:'15:12',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Femenino'},
+ {d:1,h:'15:24',dur:12,disc:'Natación',fase:'Final',m:'50 m libre — Masculino'},
+ {d:1,h:'15:36',dur:12,disc:'Natación',fase:'Final',m:'50 m libre F / 25 m pecho M'},
+ {d:1,h:'15:12',dur:12,disc:'Atletismo',fase:'Final',m:'100 m — Masculino'},
+ {d:1,h:'15:24',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 1'},
+ {d:1,h:'15:36',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 2'},
+ {d:1,h:'15:48',dur:12,disc:'Atletismo',fase:'Final',m:'100 m Femenino · FINAL'},
+ {d:1,h:'16:00',dur:12,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Masculino'},
+ {d:1,h:'16:12',dur:12,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Femenino'},
+ {d:1,h:'15:48',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 1'},
+ {d:1,h:'16:00',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 2'},
+ {d:1,h:'16:12',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 3'},
+ {d:1,h:'16:24',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornada 1'},
+ {d:1,h:'16:36',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornadas 2 y 3'},
+ {d:1,h:'16:48',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 1'},
+ {d:2,h:'08:00',dur:20,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 1'},
+ {d:2,h:'08:00',dur:20,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 1'},
+ {d:2,h:'08:20',dur:20,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 2'},
+ {d:2,h:'08:20',dur:20,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 2'},
+ {d:2,h:'08:40',dur:20,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 3'},
+ {d:2,h:'08:40',dur:20,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 3'},
+ {d:2,h:'09:00',dur:20,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 4'},
+ {d:2,h:'09:00',dur:20,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 4'},
+ {d:2,h:'09:20',dur:20,disc:'Fútbol Masculino',fase:'Semifinal',m:'Semifinal 1'},
+ {d:2,h:'09:20',dur:20,disc:'Fútbol Femenino',fase:'Semifinal',m:'Semifinal 1'},
+ {d:2,h:'09:40',dur:20,disc:'Fútbol Masculino',fase:'Semifinal',m:'Semifinal 2'},
+ {d:2,h:'09:40',dur:20,disc:'Fútbol Femenino',fase:'Semifinal',m:'Semifinal 2'},
+ {d:2,h:'10:00',dur:20,disc:'Fútbol Masculino',fase:'3er puesto',m:'3er puesto'},
+ {d:2,h:'10:00',dur:20,disc:'Fútbol Femenino',fase:'3er puesto',m:'3er puesto'},
+ {d:2,h:'10:20',dur:20,disc:'Fútbol Masculino',fase:'Final',m:'FINAL'},
+ {d:2,h:'10:20',dur:20,disc:'Fútbol Femenino',fase:'Final',m:'FINAL'},
+ {d:2,h:'10:40',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 2'},
+ {d:2,h:'10:52',dur:12,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 3'},
+ {d:2,h:'11:04',dur:36,disc:'Vóley Masculino',fase:'Llave',m:'Semifinales + 3º + Final'},
+ {d:2,h:'11:40',dur:48,disc:'Vóley Femenino',fase:'Llave',m:'Triangular + Final'},
+ {d:2,h:'12:28',dur:108,disc:'Básquet Masculino',fase:'Grupos',m:'Grupos A y B (9 partidos)'},
+ {d:2,h:'14:16',dur:48,disc:'Básquet Masculino',fase:'Llave',m:'Semifinales + 3º + Final'},
+ {d:2,h:'15:04',dur:48,disc:'Básquet Femenino',fase:'Grupos',m:'Grupos A y B (4 partidos)'},
+ {d:2,h:'15:52',dur:36,disc:'Básquet Femenino',fase:'Llave',m:'Semifinales + Final'},
+ {d:2,h:'10:40',dur:84,disc:'Tenis de mesa',fase:'Grupos',m:'Grupos (2 mesas)'},
+ {d:2,h:'12:04',dur:24,disc:'Tenis de mesa',fase:'Llave',m:'Semifinales + Final'},
+ {d:2,h:'10:40',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 1'},
+ {d:2,h:'11:10',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 2'},
+ {d:2,h:'11:40',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 3'},
+ {d:2,h:'12:10',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 4'},
+ {d:2,h:'12:40',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 5'}
+];
+/* --- Grupos (tablas de posiciones de arranque) --- */
+const GRUPOS_OFICIALES={
+ 'Vóley Masculino':{'Grupo A':['Black and White (2A)','La naranja mecánica (4B-C)','Los del A (6A)'],'Grupo B':['Bélgica (6C)','USA (5A-C)','Cota Perdida (1A)'],'Grupo C':['Paraguay (8 A-B)','Miedo a nadie (5B)','Alemania (4A)']},
+ 'Vóley Femenino':{'Triangular':['Casigana FC (6C)','Que Chimba So (2 B-C)','Cota Perdida (1A)']},
+ 'Básquet Masculino':{'Grupo A':['Casigana FC (6 C-B)','Menos es Más (5B)','Solitario BF (8B)','Cota Perdida (1A)'],'Grupo B':['Black and White (2A)','Minnesota T. (3C)','Que Chimba So (2 B-C)']},
+ 'Básquet Femenino':{'Grupo A':['Las arquineñas (2A)','Francia (5B)','Los vengadores (3C)'],'Grupo B':['Que Chimba So (2 B-C)','Cota Perdida (1A)']},
+ 'Tenis de mesa':{'Grupo A':['Julio Avellaneda','César Guanoluisa','Luis Pinango','Nelson Zambrano'],'Grupo B':['Glenn Vinueza','Diego Zambrano','Leonel Cedeño'],'Grupo C':['Caleb Bustamante','Sebastián Ube','James Macías']}
+};
+/* --- Llaves (rondas) --- */
+const LLAVES={
+ 'Fútbol Masculino':[['Cuartos','8 clasificados de la fase previa (7 ganadores P8–P14 + mejor perdedor)'],['Semifinales','Ganadores de cuartos'],['Final','Ganadores de semifinal · + 3er puesto']],
+ 'Fútbol Femenino':[['Cuartos','8 clasificadas (5 ganadoras S6–S10 + 3 mejores perdedoras)'],['Semifinales','Ganadoras de cuartos'],['Final','Ganadoras de semifinal · + 3er puesto']],
+ 'Vóley Masculino':[['Semifinal 1','1° Grupo A vs Mejor 2°'],['Semifinal 2','1° Grupo B vs 1° Grupo C'],['Final','Ganadores de semifinal · + 3er puesto']],
+ 'Vóley Femenino':[['Final','1° vs 2° del triangular']],
+ 'Básquet Masculino':[['Semifinal 1','1° Grupo A vs 2° Grupo B'],['Semifinal 2','1° Grupo B vs 2° Grupo A'],['Final','Ganadores de semifinal · + 3er puesto']],
+ 'Básquet Femenino':[['Semifinal 1','1° Grupo A vs 2° Grupo B'],['Semifinal 2','1° Grupo B vs 2° Grupo A'],['Final','Ganadoras de semifinal']],
+ 'Tenis de mesa':[['Semifinal 1','1° Grupo A vs Mejor 2°'],['Semifinal 2','1° Grupo B vs 1° Grupo C'],['Final','Ganadores de semifinal']],
+ 'Tenis de campo M':[['Semifinal 1','Glenn Vinueza vs James Macías'],['Semifinal 2','Xavier Turriago vs Jenner Erraes'],['Final','Ganadores de semifinal · + 3er puesto']],
+ 'Ajedrez':[['Sistema suizo','8 jugadores · 5 rondas · gana quien sume más puntos (sin eliminación)']],
+ 'Natación':[['Finales por tiempo','Cada prueba se define en una sola serie; gana el mejor tiempo']],
+ 'Atletismo':[['Finales por tiempo','100 m y Relevos 4x100; clasifica el mejor tiempo']]
+};
+const DISCS_DASH=['Fútbol Masculino','Fútbol Femenino','Vóley Masculino','Vóley Femenino','Básquet Masculino','Básquet Femenino','Tenis de mesa','Tenis de campo M','Ajedrez','Natación','Atletismo'];
+const DISC_ICO={'Fútbol Masculino':'⚽','Fútbol Femenino':'⚽','Vóley Masculino':'🏐','Vóley Femenino':'🏐','Básquet Masculino':'🏀','Básquet Femenino':'🏀','Tenis de mesa':'🏓','Tenis de campo M':'🎾','Ajedrez':'♟️','Natación':'🏊','Atletismo':'🏃'};
+const CURSOS_OFICIALES=["1ro A","2do A","2do B-C","3ro A-C","3ro B","3ro C","4to A","4to B-C","4to C","5to A","5to A-C","5to B","6to A","6to B","6to B-C","6to C","7mo A-B","7mo B","8vo A-B","8vo B"];
+
+function schedRows(disc){
+  const evs=FX.filter(e=>e.disc===disc).sort((a,b)=>evStart(a)-evStart(b));
+  if(!evs.length) return '';
+  let h='<table><thead><tr><th class="left">Estado / hora</th><th class="left">Fase</th><th class="left">Evento</th><th class="left">Día</th></tr></thead><tbody>';
+  evs.forEach(e=>{ const est=estadoEv(e); h+=`<tr><td class="left">${chipHTML(est)}</td><td class="left"><span class="mini">${esc2(e.fase)}</span></td><td class="left">${esc2(e.m)}</td><td class="left"><span class="mini">${e.d===1?'Jue 23 Jul':'Sáb 1 Ago'}</span></td></tr>`; });
+  return h+'</tbody></table>';
+}
+function standingsHTML(disc){
+  const gs=GRUPOS_OFICIALES[disc]; if(!gs) return '';
+  let h='';
+  Object.keys(gs).forEach(gn=>{
+    h+=`<h4 style="margin:8px 0 2px">${esc2(gn)}</h4><table><thead><tr><th class="left">Equipo / jugador</th><th>PJ</th><th>PG</th><th>PP</th><th>Pts</th></tr></thead><tbody>`;
+    gs[gn].forEach(t=>h+=`<tr><td class="left">${esc2(t)}</td><td>0</td><td>0</td><td>0</td><td><b>0</b></td></tr>`);
+    h+='</tbody></table>';
+  });
+  return h;
+}
+function llaveHTML(disc){
+  const l=LLAVES[disc]; if(!l) return '';
+  let h='<div style="margin:6px 0"><b class="mini" style="color:#155C34">LLAVE</b><ul style="margin:4px 0 0;padding-left:18px">';
+  l.forEach(([r,d])=>h+=`<li style="margin:2px 0"><b>${esc2(r)}:</b> <span class="mini">${esc2(d)}</span></li>`);
+  return h+'</ul></div>';
+}
+function renderPosiciones(){
+  const cont=document.getElementById('tab-posiciones'); if(!cont) return;
+  const total=FX.length, done=FX.filter(e=>estadoEv(e).k==='done').length, live=FX.filter(e=>estadoEv(e).k==='live').length;
+  const pct=Math.round(done/total*100);
+  const now=new Date();
+  const prox=FX.filter(e=>evStart(e)>now).sort((a,b)=>evStart(a)-evStart(b))[0];
+  let h=`<div class="card"><h2 class="sec">🏅 Medallero general por paralelo</h2>
+    <p class="sub">Se actualizará con los resultados oficiales durante las Olimpiadas. Fútbol otorga el mayor puntaje; vóley y básquet a continuación; disciplinas individuales suman al medallero.</p>
+    <details class="acc"><summary><span class="sec" style="font-size:.98rem">Ver medallero (en 0 hasta que inicien los resultados)</span></summary><div style="padding:4px 2px"><table><thead><tr><th>#</th><th class="left">Paralelo/Curso</th><th>🥇</th><th>🥈</th><th>🥉</th><th>Puntos</th></tr></thead><tbody>`;
+  CURSOS_OFICIALES.forEach((c,i)=>h+=`<tr><td class="pos">${i+1}</td><td class="left">${esc2(c)}</td><td>0</td><td>0</td><td>0</td><td><b>0</b></td></tr>`);
+  h+=`</tbody></table></div></details></div>`;
+  // avance
+  h+=`<div class="card"><h2 class="sec">📊 Avance de las Olimpiadas</h2>
+    <div style="background:#eef4f0;border-radius:10px;height:14px;overflow:hidden;margin:6px 0"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#155C34,#1c7a45)"></div></div>
+    <p class="mini" style="margin:2px 0 0"><b>${done}</b> de <b>${total}</b> eventos finalizados (${pct}%)${live?` · <span style="color:#c0392b;font-weight:700">${live} en curso</span>`:''}. Las horas aparecen 20 min antes de cada evento.</p>`;
+  if(prox){ const e2=estadoEv(prox); h+=`<div style="margin-top:8px;padding:8px 12px;border-left:4px solid #C99A2E;background:#fbfaf5;border-radius:6px"><b>Próximo:</b> ${esc2(prox.disc)} — ${esc2(prox.m)}<br>${chipHTML(e2)}</div>`; }
+  h+=`</div>`;
+  // por deporte: tabla + llave + horario
+  DISCS_DASH.forEach(disc=>{
+    const evs=FX.filter(e=>e.disc===disc); if(!evs.length&&!GRUPOS_OFICIALES[disc]) return;
+    const dn=done>0?evs.filter(e=>estadoEv(e).k==='done').length:0;
+    h+=`<details class="card acc"><summary><span class="sec">${DISC_ICO[disc]||'🏆'} ${esc2(disc)}</span> <span class="tag ${GRUPOS_OFICIALES[disc]?'eq':'ind'}">${evs.length} eventos</span></summary><div class="accbody">`;
+    const st=standingsHTML(disc);
+    if(st){ h+=`<b class="mini" style="color:#155C34">TABLA DE POSICIONES</b>${st}`; }
+    h+=llaveHTML(disc);
+    h+=`<b class="mini" style="color:#155C34">HORARIO</b>${schedRows(disc)}`;
+    h+=`</div></details>`;
+  });
+  cont.innerHTML=h;
+}
+/* Calendario = línea de tiempo por día */
+function renderCalendario(){
+  const cont=document.getElementById('tab-calendario'); if(!cont) return;
+  let h=`<div class="card"><h2 class="sec">📅 Calendario por día y sede</h2><p class="sub">La hora de cada evento se revela 20 minutos antes.</p></div>`;
+  [1,2].forEach(dia=>{
+    h+=`<div class="card"><h2 class="sec">${DIA_LBL[dia]}</h2><table><thead><tr><th class="left">Estado / hora</th><th class="left">Disciplina</th><th class="left">Fase</th><th class="left">Evento</th></tr></thead><tbody>`;
+    FX.filter(e=>e.d===dia).sort((a,b)=>evStart(a)-evStart(b)).forEach(e=>{ const est=estadoEv(e); h+=`<tr><td class="left">${chipHTML(est)}</td><td class="left">${esc2(e.disc)}</td><td class="left"><span class="mini">${esc2(e.fase)}</span></td><td class="left">${esc2(e.m)}</td></tr>`; });
+    h+=`</tbody></table></div>`;
+  });
+  cont.innerHTML=h;
+}
+/* --- Lista oficial de participantes (estática) --- */
+const PART_OFICIAL=[
+ ['⚽ Fútbol','Masculino','eq',[['España','1ro A'],['Egipto','2do A'],['Colombia','2do B-C'],['Suiza','3ro A-C'],['Inglaterra','3ro B'],['Alemania','4to A'],['Países Bajos','4to B-C'],['EEUU','5to A-C'],['Francia','5to B'],['Noruega','6to A'],['Argentina','6to B'],['Bélgica','6to C'],['Ecuador','7mo A-B'],['Paraguay','8vo A-B']]],
+ ['⚽ Fútbol','Femenino','eq',[['España','1ro A'],['Egipto','2do A'],['Colombia','2do B-C'],['Suiza','3ro C'],['Alemania','4to A'],['Países Bajos','4to B-C'],['EEUU','5to A-C'],['Francia','5to B'],['Argentina','6to B-C'],['Paraguay','8vo A-B']]],
+ ['🏐 Voleibol','Masculino','eq',[['Black and White','2do A'],['La naranja mecánica','4to B-C'],['Los del A','6to A'],['Bélgica','6to C'],['USA','5to A-C'],['Cota Perdida','1ro A'],['Paraguay','8vo A-B'],['Miedo a nadie','5to B'],['Alemania','4to A']]],
+ ['🏐 Voleibol','Femenino','eq',[['Casigana FC','6to C'],['Que Chimba So','2do B-C'],['Cota Perdida','1ro A']]],
+ ['🏀 Básquet','Masculino','eq',[['Casigana FC','6to C-B'],['Menos es Más','5to B'],['Solitario BF','8vo B'],['Cota Perdida','1ro A'],['Black and White','2do A'],['Minnesota Timberwolves','3ro C'],['Que Chimba So','2do B-C']]],
+ ['🏀 Básquet','Femenino','eq',[['Las arquineñas','2do A'],['Francia','5to B'],['Los vengadores','3ro C'],['Que Chimba So','2do B-C'],['Cota Perdida','1ro A']]],
+ ['🏓 Tenis de mesa','Masculino','ind',[['Julio Avellaneda','6to C'],['Glenn Vinueza','6to A'],['Caleb Bustamante','4to B'],['César Guanoluisa','8vo'],['Diego Zambrano','7mo A'],['Sebastián Ube','3ro A'],['Luis Pinango','3ro A'],['Leonel Cedeño','4to B-C'],['James Macías','6to B'],['Nelson Zambrano','4to B']]],
+ ['🏓 Tenis de mesa','Femenino','ind',[['Allison Guamán','6to C'],['Elsi Zambrano','1ro A']]],
+ ['🎾 Tenis de campo','Masculino','ind',[['Glenn Vinueza','6to A'],['Xavier Turriago','6to C'],['Jenner Erraes','3ro C'],['James Macías','6to B']]],
+ ['♟️ Ajedrez','Mixto','ind',[['Irvin Macías','6to A'],['Bravo Jostin','3ro C'],['Henner Velásquez','2do A'],['Castillo Alejandro','4to A'],['Luis Pinango','3ro A'],['Sebastián Ube','3ro A'],['Sebastián Buenaño','2do B'],['Sonnia Caravaca','5to A']]],
+ ['🏊 Natación','Masculino','ind',[['Carriel Darling','8vo B'],['Leonel Cedeño','4to B-C'],['Angelo Véliz','5to A'],['Wlahir Cedeño','3ro A'],['Celso Guerrero','2do A'],['Cedeño Jordan','1ro A'],['Rizo Erick','6to C']]],
+ ['🏊 Natación','Femenino','ind',[['Camila Espinoza','4to C'],['Jahaira Jasu','2do A'],['Suriel Coello','4to B-C']]],
+ ['🏃 Atletismo 100 m','Masculino','ind',[['Julio Avellaneda','6to C'],['Alejandro Pacheco','6to C'],['Daniel Jáuregui Risco','2do A'],['Henner Velásquez','2do A'],['Leonel Cedeño','4to B-C'],['Georgi Villarreal','7mo A-B'],['Baque Jordan','6to A'],['Sellán Carlos','1ro A']]],
+ ['🏃 Atletismo 100 m','Femenino','ind',[['Allison Guamán','6to C'],['Nicole Armijos','6to C'],['Aitana Lara','6to C'],['Aleska Bayas','4to B'],['Norelys Castellano','6to C'],['Jahaira Palma','2do A'],['Leidy Peñafiel','5to B'],['Zalma Naranjo','5to B'],['Mariángel Jiménez','5to B'],['Nelty Vélez','5to B'],['Angeska Rivas','5to A'],['Deicy Chalaco','7mo B'],['Amy Castellano','8vo A'],['Jahaira Jasu','2do A']]],
+ ['🏃 Relevos 4x100','Masculino','eq',[['Noruega','6to A'],['Paraguay','8vo A-B'],['EEUU','5to A'],['Francia','5to B']]],
+ ['🏃 Relevos 4x100','Femenino','eq',[['Francia','5to B']]]
+];
+function renderParticipantes(){
+  const cont=document.getElementById('tab-participantes'); if(!cont) return;
+  let totEq=0,totInd=0;
+  PART_OFICIAL.forEach(s=>{ if(s[2]==='eq')totEq+=s[3].length; else totInd+=s[3].length; });
+  let h=`<div class="card"><h2 class="sec">👥 Lista oficial de participantes</h2><p class="sub">Inscripciones cerradas. Nómina oficial: <b>${totEq}</b> equipos y <b>${totInd}</b> participantes individuales.</p>`;
+  PART_OFICIAL.forEach(([label,rama,tipo,rows])=>{
+    h+=`<details class="acc" style="margin:6px 0"><summary><span class="sec" style="font-size:1rem">${esc2(label)} — ${esc2(rama)}</span> <span class="tag ${tipo==='eq'?'eq':'ind'}">${rows.length} ${tipo==='eq'?'equipos':'participantes'}</span></summary><div style="padding:4px 2px"><table><thead><tr><th>#</th><th class="left">${tipo==='eq'?'Equipo':'Participante'}</th><th class="left">Paralelo</th></tr></thead><tbody>`;
+    rows.forEach((r,i)=>h+=`<tr><td>${i+1}</td><td class="left">${esc2(r[0])}</td><td class="left">${esc2(r[1])}</td></tr>`);
+    h+=`</tbody></table></div></details>`;
+  });
+  h+=`</div>`;
+  cont.innerHTML=h;
+}
+setInterval(function(){ const p=document.getElementById('tab-posiciones'); if(p&&!p.classList.contains('hidden')) renderPosiciones(); const c=document.getElementById('tab-calendario'); if(c&&!c.classList.contains('hidden')) renderCalendario(); },30000);
+
 if(MODE==='sheets'){ _data=loadSnap(); }
 renderPosiciones();
-if(MODE==='sheets'){ refreshData(); setInterval(refreshData, 25000); }
-else if(MODE==='supabase'){ setInterval(()=>{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); }, 20000); }
+if(!SIN_CONEXION && MODE==='sheets'){ refreshData(); setInterval(refreshData, 25000); }
+else if(!SIN_CONEXION && MODE==='supabase'){ setInterval(()=>{ if(!document.getElementById('tab-posiciones').classList.contains('hidden')) renderPosiciones(); }, 20000); }
 </script>
 </body>
 </html>
