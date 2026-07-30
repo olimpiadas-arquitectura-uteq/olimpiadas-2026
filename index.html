@@ -1093,7 +1093,7 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
    ============================================================ */
 const SIN_CONEXION=false;
 const DIA_FECHA={1:'2026-07-23',2:'2026-08-01'};
-const DIA_LBL={1:'Día 1 · Jueves 23 de Julio',2:'Día 2 · Sábado 1 de Agosto'};
+const DIA_LBL={1:'Jornada única · 08h00–15h00'};
 const REVEAL_MIN=20;
 function _pad(n){return String(n).padStart(2,'0');}
 function evStart(ev){return new Date(DIA_FECHA[ev.d]+'T'+ev.h+':00');}
@@ -1115,102 +1115,70 @@ function chipHTML(est){
 }
 /* --- Calendario oficial --- */
 const FX=[
- // ===== DÍA 1 · Fútbol Masculino — fase previa (oficial · 50 min · 2 canchas · SIN paralelos hasta las 15h00) =====
- {d:1,h:'10:00',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P1 · España vs Paraguay'},
- {d:1,h:'10:00',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P2 · Suiza vs Noruega'},
- {d:1,h:'10:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P3 · Egipto vs Ecuador'},
- {d:1,h:'10:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P4 · Colombia vs Bélgica'},
- {d:1,h:'11:40',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P5 · Inglaterra vs EEUU'},
- {d:1,h:'11:40',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P6 · Francia vs Argentina'},
- {d:1,h:'12:30',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P7 · Alemania vs Países Bajos'},
- {d:1,h:'12:30',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P8 · Ganador P1 vs Perdedor P2'},
- {d:1,h:'13:20',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P9 · Ganador P2 vs Perdedor P3'},
- {d:1,h:'13:20',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P10 · Ganador P3 vs Perdedor P4'},
- {d:1,h:'14:10',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P11 · Ganador P4 vs Perdedor P5'},
- {d:1,h:'14:10',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P12 · Ganador P5 vs Perdedor P6'},
- {d:1,h:'15:00',dur:50,disc:'Fútbol Masculino',fase:'Amistoso',m:'Profesores Arquitectura vs Profesores FCI (ambas canchas)'},
- {d:1,h:'15:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P13 · Ganador P6 vs Perdedor P7'},
- {d:1,h:'15:50',dur:50,disc:'Fútbol Masculino',fase:'Fase previa',m:'P14 · Ganador P7 vs Perdedor P1'},
- // ===== DÍA 1 · Desde las 15h50 (tras el partido de docentes 15h00–15h50) — individuales en paralelo =====
- {d:1,h:'15:50',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Masculino'},
- {d:1,h:'16:02',dur:12,disc:'Natación',fase:'Final',m:'25 m libre — Femenino'},
- {d:1,h:'16:14',dur:12,disc:'Natación',fase:'Final',m:'50 m libre — Masculino'},
- {d:1,h:'16:26',dur:12,disc:'Natación',fase:'Final',m:'50 m libre F / 25 m pecho M'},
- {d:1,h:'15:50',dur:12,disc:'Atletismo',fase:'Final',m:'100 m — Masculino'},
- {d:1,h:'16:02',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 1'},
- {d:1,h:'16:14',dur:12,disc:'Atletismo',fase:'Serie',m:'100 m Femenino · Serie 2'},
- {d:1,h:'16:26',dur:12,disc:'Atletismo',fase:'Final',m:'100 m Femenino · FINAL'},
- {d:1,h:'16:38',dur:12,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Masculino'},
- {d:1,h:'15:50',dur:18,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinal 1'},
- {d:1,h:'16:08',dur:18,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinal 2'},
- {d:1,h:'16:26',dur:12,disc:'Tenis de campo M',fase:'3er puesto',m:'3er puesto'},
- {d:1,h:'16:38',dur:12,disc:'Tenis de campo M',fase:'Final',m:'Final'},
- // ===== DÍA 2 · Fútbol Femenino — fase previa (oficial · 40 min · 2 canchas) =====
- {d:2,h:'10:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S1 · España vs Egipto'},
- {d:2,h:'10:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S2 · Colombia vs Suiza'},
- {d:2,h:'10:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S3 · Alemania vs Países Bajos'},
- {d:2,h:'10:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S4 · Francia vs EEUU'},
- {d:2,h:'11:20',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S5 · Argentina vs Paraguay'},
- {d:2,h:'11:20',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S6 · Ganador S1 vs Perdedor S2'},
- {d:2,h:'12:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S7 · Ganador S2 vs Perdedor S3'},
- {d:2,h:'12:00',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S8 · Ganador S3 vs Perdedor S4'},
- {d:2,h:'12:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S9 · Ganador S4 vs Perdedor S5'},
- {d:2,h:'12:40',dur:40,disc:'Fútbol Femenino',fase:'Fase previa',m:'S10 · Ganador S5 vs Perdedor S1'},
- // ===== DÍA 2 · Fútbol — FINALES M y F (13h20–16h40) =====
- {d:2,h:'13:20',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 1'},
- {d:2,h:'13:20',dur:25,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 1'},
- {d:2,h:'13:45',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 2'},
- {d:2,h:'13:45',dur:25,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 2'},
- {d:2,h:'14:10',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 3'},
- {d:2,h:'14:10',dur:25,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 3'},
- {d:2,h:'14:35',dur:25,disc:'Fútbol Masculino',fase:'Cuartos',m:'Cuartos de final 4'},
- {d:2,h:'14:35',dur:25,disc:'Fútbol Femenino',fase:'Cuartos',m:'Cuartos de final 4'},
- {d:2,h:'15:00',dur:25,disc:'Fútbol Masculino',fase:'Semifinal',m:'Semifinal 1'},
- {d:2,h:'15:00',dur:25,disc:'Fútbol Femenino',fase:'Semifinal',m:'Semifinal 1'},
- {d:2,h:'15:25',dur:25,disc:'Fútbol Masculino',fase:'Semifinal',m:'Semifinal 2'},
- {d:2,h:'15:25',dur:25,disc:'Fútbol Femenino',fase:'Semifinal',m:'Semifinal 2'},
- {d:2,h:'15:50',dur:25,disc:'Fútbol Masculino',fase:'3er puesto',m:'3er puesto'},
- {d:2,h:'15:50',dur:25,disc:'Fútbol Femenino',fase:'3er puesto',m:'3er puesto'},
- {d:2,h:'16:15',dur:25,disc:'Fútbol Masculino',fase:'Final',m:'FINAL'},
- {d:2,h:'16:15',dur:25,disc:'Fútbol Femenino',fase:'Final',m:'FINAL'},
- // ===== DÍA 2 · Vóley, Básquet y Ajedrez en paralelo (08h00–13h20) =====
- {d:2,h:'08:00',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 1  (Cancha vóley 1)'},
- {d:2,h:'08:00',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornada 1  (Cancha vóley 2)'},
- {d:2,h:'08:15',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 2  (Cancha vóley 1)'},
- {d:2,h:'08:15',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornada 2  (Cancha vóley 2)'},
- {d:2,h:'08:30',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo A · Jornada 3  (Cancha vóley 1)'},
- {d:2,h:'08:30',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo B · Jornada 3  (Cancha vóley 2)'},
- {d:2,h:'08:45',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 1  (Cancha vóley 1)'},
- {d:2,h:'09:00',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 2  (Cancha vóley 1)'},
- {d:2,h:'09:15',dur:15,disc:'Vóley Masculino',fase:'Grupos',m:'Grupo C · Jornada 3  (Cancha vóley 1)'},
- {d:2,h:'09:30',dur:15,disc:'Vóley Masculino',fase:'Semifinal',m:'Semifinal 1'},
- {d:2,h:'09:30',dur:15,disc:'Vóley Masculino',fase:'Semifinal',m:'Semifinal 2'},
- {d:2,h:'09:45',dur:15,disc:'Vóley Masculino',fase:'3er puesto',m:'3er puesto'},
- {d:2,h:'10:00',dur:15,disc:'Vóley Masculino',fase:'Final',m:'FINAL'},
- {d:2,h:'08:45',dur:15,disc:'Vóley Femenino',fase:'Triangular',m:'Jornada 1  (Cancha vóley 2)'},
- {d:2,h:'09:00',dur:15,disc:'Vóley Femenino',fase:'Triangular',m:'Jornada 2  (Cancha vóley 2)'},
- {d:2,h:'09:15',dur:15,disc:'Vóley Femenino',fase:'Triangular',m:'Jornada 3  (Cancha vóley 2)'},
- {d:2,h:'09:30',dur:15,disc:'Vóley Femenino',fase:'Final',m:'FINAL  (Cancha vóley 2)'},
- {d:2,h:'08:00',dur:105,disc:'Básquet Masculino',fase:'Grupos',m:'Grupos A y B (9 partidos)'},
- {d:2,h:'09:45',dur:60,disc:'Básquet Masculino',fase:'Llave',m:'Semifinales + 3º + Final'},
- {d:2,h:'10:45',dur:48,disc:'Básquet Femenino',fase:'Grupos',m:'Grupos A y B (4 partidos)'},
- {d:2,h:'11:33',dur:45,disc:'Básquet Femenino',fase:'Llave',m:'Semifinales + Final'},
- {d:2,h:'08:00',dur:90,disc:'Tenis de mesa',fase:'Grupos',m:'Grupos (2 mesas)'},
- {d:2,h:'09:30',dur:24,disc:'Tenis de mesa',fase:'Llave',m:'Semifinales + Final'},
- {d:2,h:'08:00',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 1'},
- {d:2,h:'08:30',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 2'},
- {d:2,h:'09:00',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 3'},
- {d:2,h:'09:30',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 4'},
- {d:2,h:'10:00',dur:30,disc:'Ajedrez',fase:'Suizo',m:'Ronda 5'}
+ // ===== FÚTBOL MASCULINO (bloques de 50 min · 2 canchas · sin 3er puesto) =====
+ {d:1,h:'08:00',dur:50,disc:'Fútbol Masculino',fase:'Cuartos',m:'FM-P1 · Bélgica vs Argentina (Cancha M1)'},
+ {d:1,h:'08:00',dur:50,disc:'Fútbol Masculino',fase:'Cuartos',m:'FM-P2 · Suiza vs Paraguay (Cancha M2)'},
+ {d:1,h:'08:50',dur:50,disc:'Fútbol Masculino',fase:'Cuartos',m:'FM-P3 · Países Bajos vs Francia (Cancha M1)'},
+ {d:1,h:'08:50',dur:50,disc:'Fútbol Masculino',fase:'Cuartos',m:'FM-P4 · Colombia vs Inglaterra (Cancha M2)'},
+ {d:1,h:'10:20',dur:50,disc:'Fútbol Masculino',fase:'Semifinal',m:'FM-S1 · Ganador P1 vs Ganador P2 (Cancha M1)'},
+ {d:1,h:'10:20',dur:50,disc:'Fútbol Masculino',fase:'Semifinal',m:'FM-S2 · Ganador P3 vs Ganador P4 (Cancha M2)'},
+ {d:1,h:'13:10',dur:50,disc:'Fútbol Masculino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2 (Cancha principal)'},
+ // ===== FÚTBOL FEMENINO (bloques de 40 min · 2 canchas · sin 3er puesto) =====
+ {d:1,h:'08:00',dur:40,disc:'Fútbol Femenino',fase:'Cuartos',m:'FF-P1 · Países Bajos vs Paraguay (Cancha F1)'},
+ {d:1,h:'08:00',dur:40,disc:'Fútbol Femenino',fase:'Cuartos',m:'FF-P2 · España vs Alemania (Cancha F2)'},
+ {d:1,h:'08:40',dur:40,disc:'Fútbol Femenino',fase:'Cuartos',m:'FF-P3 · Colombia vs Egipto (Cancha F1)'},
+ {d:1,h:'08:40',dur:40,disc:'Fútbol Femenino',fase:'Cuartos',m:'FF-P4 · Bélgica vs USA (Cancha F2)'},
+ {d:1,h:'09:40',dur:40,disc:'Fútbol Femenino',fase:'Semifinal',m:'FF-S1 · Ganador P1 vs Ganador P2 (Cancha F1)'},
+ {d:1,h:'09:40',dur:40,disc:'Fútbol Femenino',fase:'Semifinal',m:'FF-S2 · Ganador P3 vs Ganador P4 (Cancha F2)'},
+ {d:1,h:'12:30',dur:40,disc:'Fútbol Femenino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2 (Cancha principal)'},
+ // ===== VÓLEY MASCULINO (bloques de 30 min · 2 canchas · ganadores vs perdedores) =====
+ {d:1,h:'08:00',dur:30,disc:'Vóley Masculino',fase:'1ª ronda',m:'VM-P1 · Países Bajos vs Noruega (Cancha V1)'},
+ {d:1,h:'08:00',dur:30,disc:'Vóley Masculino',fase:'1ª ronda',m:'VM-P2 · Bélgica vs Egipto (Cancha V2)'},
+ {d:1,h:'08:30',dur:30,disc:'Vóley Masculino',fase:'1ª ronda',m:'VM-P3 · Colombia vs Paraguay (Cancha V1)'},
+ {d:1,h:'08:30',dur:30,disc:'Vóley Masculino',fase:'1ª ronda',m:'VM-P4 · España vs Francia (Cancha V2)'},
+ {d:1,h:'09:00',dur:30,disc:'Vóley Masculino',fase:'2ª ronda',m:'VM-P5 · Ganador P1 vs Perdedor P2 (Cancha V1)'},
+ {d:1,h:'09:00',dur:30,disc:'Vóley Masculino',fase:'2ª ronda',m:'VM-P6 · Ganador P2 vs Perdedor P1 (Cancha V2)'},
+ {d:1,h:'09:30',dur:30,disc:'Vóley Masculino',fase:'2ª ronda',m:'VM-P7 · Ganador P3 vs Perdedor P4 (Cancha V1)'},
+ {d:1,h:'09:30',dur:30,disc:'Vóley Masculino',fase:'2ª ronda',m:'VM-P8 · Ganador P4 vs Perdedor P3 (Cancha V2)'},
+ {d:1,h:'10:30',dur:30,disc:'Vóley Masculino',fase:'Semifinal',m:'VM-S1 · Ganador P5 vs Ganador P7 (Cancha V1)'},
+ {d:1,h:'10:30',dur:30,disc:'Vóley Masculino',fase:'Semifinal',m:'VM-S2 · Ganador P6 vs Ganador P8 (Cancha V2)'},
+ {d:1,h:'11:30',dur:30,disc:'Vóley Masculino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2 (Cancha de vóley 2)'},
+ // ===== VÓLEY FEMENINO (30 min · 2 canchas · arranca 11h00) =====
+ {d:1,h:'11:00',dur:30,disc:'Vóley Femenino',fase:'Semifinal',m:'VF-S1 · Bélgica vs Colombia (Cancha V1)'},
+ {d:1,h:'11:00',dur:30,disc:'Vóley Femenino',fase:'Semifinal',m:'VF-S2 · Suiza vs Francia (Cancha V2)'},
+ {d:1,h:'12:00',dur:30,disc:'Vóley Femenino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2 (Cancha de vóley 1)'},
+ // ===== BÁSQUET MASCULINO (30 min · una cancha · repesca del mejor perdedor) =====
+ {d:1,h:'08:00',dur:30,disc:'Básquet Masculino',fase:'Fase inicial',m:'BM-C1 · Noruega ABC vs Egipto'},
+ {d:1,h:'08:30',dur:30,disc:'Básquet Masculino',fase:'Fase inicial',m:'BM-C2 · Colombia vs Suiza'},
+ {d:1,h:'09:00',dur:30,disc:'Básquet Masculino',fase:'Fase inicial',m:'BM-C3 · España vs Francia'},
+ {d:1,h:'10:30',dur:30,disc:'Básquet Masculino',fase:'Semifinal',m:'BM-S1 · Ganador C1 vs Ganador C2'},
+ {d:1,h:'11:00',dur:30,disc:'Básquet Masculino',fase:'Semifinal',m:'BM-S2 · Ganador C3 vs Mejor perdedor'},
+ {d:1,h:'12:00',dur:30,disc:'Básquet Masculino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2'},
+ // ===== BÁSQUET FEMENINO (30 min · misma cancha · sin 3er puesto) =====
+ {d:1,h:'09:30',dur:30,disc:'Básquet Femenino',fase:'Semifinal',m:'BF-S1 · Egipto vs Paraguay'},
+ {d:1,h:'10:00',dur:30,disc:'Básquet Femenino',fase:'Semifinal',m:'BF-S2 · Colombia vs Francia'},
+ {d:1,h:'11:30',dur:30,disc:'Básquet Femenino',fase:'Final',m:'FINAL · Ganador S1 vs Ganador S2'},
+ // ===== ATLETISMO (pista · 10h00–11h00) =====
+ {d:1,h:'10:00',dur:20,disc:'Atletismo',fase:'Final',m:'100 m — Masculino'},
+ {d:1,h:'10:20',dur:20,disc:'Atletismo',fase:'Final',m:'100 m — Femenino'},
+ {d:1,h:'10:40',dur:20,disc:'Atletismo',fase:'Final',m:'Relevos 4x100 — Masculino'},
+ // ===== NATACIÓN (piscina de 6 carriles · 10h00–11h00) =====
+ {d:1,h:'10:00',dur:15,disc:'Natación',fase:'Final',m:'25 m libre — Masculino'},
+ {d:1,h:'10:15',dur:15,disc:'Natación',fase:'Final',m:'25 m libre — Femenino'},
+ {d:1,h:'10:30',dur:15,disc:'Natación',fase:'Final',m:'50 m libre — Masculino'},
+ {d:1,h:'10:45',dur:15,disc:'Natación',fase:'Final',m:'50 m libre F / 25 m pecho M'},
+ // ===== AJEDREZ (salón · 10h30–11h30) =====
+ {d:1,h:'10:30',dur:60,disc:'Ajedrez',fase:'Suizo',m:'Torneo (sistema suizo · 8 jugadores)'},
+ // ===== TENIS DE MESA (coliseo/salón · 11h00–12h00) =====
+ {d:1,h:'11:00',dur:60,disc:'Tenis de mesa',fase:'Competencia',m:'Grupos + llave (2 mesas)'},
+ // ===== TENIS DE CAMPO (canchas de tenis · 11h00–12h00) =====
+ {d:1,h:'11:00',dur:30,disc:'Tenis de campo M',fase:'Semifinal',m:'Semifinales'},
+ {d:1,h:'11:30',dur:30,disc:'Tenis de campo M',fase:'Final',m:'Final'},
+ // ===== CIERRE =====
+ {d:1,h:'14:00',dur:60,disc:'Ceremonia',fase:'Cierre',m:'Ceremonia de Premiación y Clausura General'}
 ];
 /* --- Grupos (tablas de posiciones de arranque) --- */
-const GRUPOS_OFICIALES={
- 'Vóley Masculino':{'Grupo A':['Black and White (2A)','La naranja mecánica (4B-C)','Los del A (6A)'],'Grupo B':['Bélgica (6C)','USA (5A-C)','Cota Perdida (1A)'],'Grupo C':['Paraguay (8 A-B)','Miedo a nadie (5B)','Alemania (4A)']},
- 'Vóley Femenino':{'Triangular':['Casigana FC (6C)','Que Chimba So (2 B-C)','Cota Perdida (1A)']},
- 'Básquet Masculino':{'Grupo A':['Casigana FC (6 C-B)','Menos es Más (5B)','Solitario BF (8B)','Cota Perdida (1A)'],'Grupo B':['Black and White (2A)','Minnesota T. (3C)','Que Chimba So (2 B-C)']},
- 'Básquet Femenino':{'Grupo A':['Las arquineñas (2A)','Francia (5B)','Los vengadores (3C)'],'Grupo B':['Que Chimba So (2 B-C)','Cota Perdida (1A)']},
- 'Tenis de mesa':{'Grupo A':['Julio Avellaneda','César Guanoluisa','Luis Pinango','Nelson Zambrano'],'Grupo B':['Glenn Vinueza','Diego Zambrano','Leonel Cedeño'],'Grupo C':['Caleb Bustamante','Sebastián Ube','James Macías']}
-};
+const GRUPOS_OFICIALES={};
 /* --- Llaves (rondas) --- */
 const LLAVES={
  'Fútbol Masculino':[['Cuartos','8 clasificados de la fase previa (7 ganadores P8–P14 + mejor perdedor)'],['Semifinales','Ganadores de cuartos'],['Final','Ganadores de semifinal · + 3er puesto']],
@@ -1286,7 +1254,7 @@ function renderPosiciones_OFF(){
 function renderCalendario(){
   const cont=document.getElementById('tab-calendario'); if(!cont) return;
   let h=`<div class="card"><h2 class="sec">📅 Calendario por día y sede</h2><p class="sub">La hora de cada evento se revela 20 minutos antes.</p></div>`;
-  [1,2].forEach(dia=>{
+  [...new Set(FX.map(e=>e.d))].sort().forEach(dia=>{
     h+=`<div class="card"><h2 class="sec">${DIA_LBL[dia]}</h2><table><thead><tr><th class="left">Estado / hora</th><th class="left">Disciplina</th><th class="left">Fase</th><th class="left">Evento</th></tr></thead><tbody>`;
     FX.filter(e=>e.d===dia).sort((a,b)=>evStart(a)-evStart(b)).forEach(e=>{ const est=estadoEv(e); h+=`<tr><td class="left">${chipHTML(est)}</td><td class="left">${esc2(e.disc)}</td><td class="left"><span class="mini">${esc2(e.fase)}</span></td><td class="left">${esc2(e.m)}</td></tr>`; });
     h+=`</tbody></table></div>`;
@@ -1336,13 +1304,12 @@ function renderParticipantes(){
 .bkwin{background:#eaf6ee;font-weight:800}
 `; document.head.appendChild(st); })();
 const PLAN_BRACKET={
- 'Fútbol Masculino':[['Cuartos',[['Clasificado 1','Clasificado 8'],['Clasificado 4','Clasificado 5'],['Clasificado 3','Clasificado 6'],['Clasificado 2','Clasificado 7']]],['Semifinal',[['Gan. Cuartos 1','Gan. Cuartos 4'],['Gan. Cuartos 2','Gan. Cuartos 3']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
- 'Fútbol Femenino':[['Cuartos',[['Clasificada 1','Clasificada 8'],['Clasificada 4','Clasificada 5'],['Clasificada 3','Clasificada 6'],['Clasificada 2','Clasificada 7']]],['Semifinal',[['Gan. Cuartos 1','Gan. Cuartos 4'],['Gan. Cuartos 2','Gan. Cuartos 3']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
- 'Vóley Masculino':[['Semifinal',[['1° Grupo A','Mejor 2°'],['1° Grupo B','1° Grupo C']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
- 'Vóley Femenino':[['Final',[['1° del triangular','2° del triangular']]]],
- 'Básquet Masculino':[['Semifinal',[['1° Grupo A','2° Grupo B'],['1° Grupo B','2° Grupo A']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
- 'Básquet Femenino':[['Semifinal',[['1° Grupo A','2° Grupo B'],['1° Grupo B','2° Grupo A']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
- 'Tenis de mesa':[['Semifinal',[['1° Grupo A','Mejor 2°'],['1° Grupo B','1° Grupo C']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Fútbol Masculino':[['Cuartos',[['Bélgica','Argentina'],['Suiza','Paraguay'],['Países Bajos','Francia'],['Colombia','Inglaterra']]],['Semifinal',[['Gan. P1','Gan. P2'],['Gan. P3','Gan. P4']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Fútbol Femenino':[['Cuartos',[['Países Bajos','Paraguay'],['España','Alemania'],['Colombia','Egipto'],['Bélgica','USA']]],['Semifinal',[['Gan. P1','Gan. P2'],['Gan. P3','Gan. P4']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]],
+ 'Vóley Masculino':[['1ª ronda',[['P. Bajos','Noruega'],['Bélgica','Egipto'],['Colombia','Paraguay'],['España','Francia']]],['2ª ronda',[['Gan P1','Perd P2'],['Gan P2','Perd P1'],['Gan P3','Perd P4'],['Gan P4','Perd P3']]],['Semifinal',[['Gan P5','Gan P7'],['Gan P6','Gan P8']]],['Final',[['Gan S1','Gan S2']]]],
+ 'Vóley Femenino':[['Semifinal',[['Bélgica','Colombia'],['Suiza','Francia']]],['Final',[['Gan S1','Gan S2']]]],
+ 'Básquet Masculino':[['Fase inicial',[['Noruega ABC','Egipto'],['Colombia','Suiza'],['España','Francia']]],['Semifinal',[['Gan C1','Gan C2'],['Gan C3','Mejor perdedor']]],['Final',[['Gan S1','Gan S2']]]],
+ 'Básquet Femenino':[['Semifinal',[['Egipto','Paraguay'],['Colombia','Francia']]],['Final',[['Gan S1','Gan S2']]]],
  'Tenis de campo M':[['Semifinal',[['Glenn Vinueza','James Macías'],['Xavier Turriago','Jenner Erraes']]],['Final',[['Gan. Semifinal 1','Gan. Semifinal 2']]]]
 };
 function mapLabel(did,rama){
@@ -1370,10 +1337,15 @@ function bracketGraphPlanned(cols){
   return `<div class="bkwrap">${out}</div>`;
 }
 function chessRoundsHTML(){
-  const howto={'Ronda 1':'Emparejamiento inicial por siembra: Irvin Macías–Luis Pinango, Bravo Jostin–Sebastián Ube, Henner Velásquez–Sebastián Buenaño, Castillo Alejandro–Sonnia Caravaca.','Ronda 2':'Se emparejan los jugadores con el MISMO puntaje (ganadores con ganadores, etc.), sin repetir rival.','Ronda 3':'Por puntaje acumulado, sin repetir rival.','Ronda 4':'Por puntaje acumulado, sin repetir rival.','Ronda 5':'Última ronda por puntaje. Gana quien más suma (Victoria 1 · Tablas 0,5 · Derrota 0). Desempate: Buchholz.'};
-  const evs=FX.filter(e=>e.disc==='Ajedrez').sort((a,b)=>evStart(a)-evStart(b));
-  let h=`<div class="mini" style="margin:4px 0"><b>Sistema suizo · 8 jugadores · 5 rondas.</b> Todas las partidas de una ronda se juegan a la vez; se rankea por puntos (no hay eliminación).</div><table><thead><tr><th class="left">Estado / hora</th><th class="left">Ronda</th><th class="left">Cómo se juega</th></tr></thead><tbody>`;
-  evs.forEach(e=>{ h+=`<tr><td class="left">${chipHTML(estadoEv(e))}</td><td class="left"><b>${esc2(e.m)}</b></td><td class="left">${esc2(howto[e.m]||'')}</td></tr>`; });
+  const rondas=[
+    ['Ronda 1','Emparejamiento inicial por siembra (ganadores contra ganadores en las siguientes).'],
+    ['Ronda 2','Se emparejan los jugadores con el MISMO puntaje, sin repetir rival.'],
+    ['Ronda 3','Por puntaje acumulado, sin repetir rival.'],
+    ['Ronda 4','Por puntaje acumulado, sin repetir rival.'],
+    ['Ronda 5','Última ronda por puntaje. Gana quien más suma (Victoria 1 · Tablas 0,5 · Derrota 0). Desempate: Buchholz.']
+  ];
+  let h=`<div class="mini" style="margin:4px 0"><b>Sistema suizo · 8 jugadores.</b> Bloque único <b>10h30–11h30</b>; se juegan varias rondas simultáneas y se rankea por puntos (sin eliminación).</div><table><thead><tr><th class="left">Ronda</th><th class="left">Cómo se juega</th></tr></thead><tbody>`;
+  rondas.forEach(r=>{ h+=`<tr><td class="left"><b>${r[0]}</b></td><td class="left">${esc2(r[1])}</td></tr>`; });
   return h+`</tbody></table>`;
 }
 
