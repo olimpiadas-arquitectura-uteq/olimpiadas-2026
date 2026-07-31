@@ -1092,8 +1092,8 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
    revelado progresivo (20 min antes de cada evento).
    ============================================================ */
 const SIN_CONEXION=false;
-const DIA_FECHA={1:'2026-07-23',2:'2026-08-01'};
-const DIA_LBL={1:'Jornada única · 08h00–15h00'};
+const DIA_FECHA={1:'2026-08-01',2:'2026-08-01'};
+const DIA_LBL={1:'Sábado 1 de Agosto · Jornada única · 08h00–15h00'};
 const REVEAL_MIN=20;
 function _pad(n){return String(n).padStart(2,'0');}
 function evStart(ev){return new Date(DIA_FECHA[ev.d]+'T'+ev.h+':00');}
